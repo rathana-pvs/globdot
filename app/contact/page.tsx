@@ -1,0 +1,2 @@
+import { InfoPage } from '@/components/info-page';
+export default function ContactPage() { return <InfoPage eyebrow="Contact" title="Talk to the newsroom" intro="Send tips, feedback and partnership enquiries to the right Globdot team."><h2>News tips</h2><p>For confidential story tips, write to tips@globdot.com. Do not send sensitive documents from a work-managed account or device.</p><h2>General enquiries</h2><p>Readers can reach hello@globdot.com. Media, licensing and partnership enquiries can be sent to partnerships@globdot.com.</p></InfoPage>; }
