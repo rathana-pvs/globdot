@@ -59,6 +59,8 @@ async function seed() {
     { name: 'Asia', slug: 'asia', sortOrder: 20 },
     { name: 'Europe', slug: 'europe', sortOrder: 30 },
     { name: 'Middle East', slug: 'middle-east', sortOrder: 40 },
+    { name: 'Africa', slug: 'africa', sortOrder: 50 },
+    { name: 'Oceania', slug: 'oceania', sortOrder: 60 },
   ];
 
   const regionMap: Record<string, string | number> = {};
@@ -137,6 +139,18 @@ async function seed() {
     },
   });
 
+  const defaultEditorialReview = {
+    factChecked: true,
+    sourcesChecked: true,
+    imageRightsChecked: true,
+    reviewedBy: 'Editor-in-Chief',
+    reviewedAt: new Date().toISOString(),
+  };
+
+  const defaultSources = [
+    { name: 'Globdot Wire Services', url: 'https://globdot.com' },
+  ];
+
   // 5. Seed Articles
   const defaultArticles = [
     {
@@ -145,11 +159,13 @@ async function seed() {
       standfirst: 'Communities are adapting as familiar species move, spawning periods shift and old calendars become less reliable.',
       dateline: 'SUVA',
       section: sectionMap['climate'],
-      regions: [regionMap['oceania']],
+      regions: [regionMap['oceania'] || regionMap['asia']],
       author: authorMap['elena-rostova'],
       homepageSlot: 'lead',
       isFeatured: true,
-      status: 'draft',
+      status: 'published',
+      sourceLinks: defaultSources,
+      editorialReview: defaultEditorialReview,
       publishedAt: new Date().toISOString(),
       readTime: 5,
       content: makeLexical([
@@ -163,11 +179,13 @@ async function seed() {
       slug: 'ai-translation-public-services-africa',
       standfirst: 'New systems promise wider access to government information while raising difficult questions about accuracy.',
       dateline: 'NAIROBI',
-      section: sectionMap['technology'],
-      regions: [regionMap['africa']],
+      section: sectionMap['tech'] || sectionMap['other'],
+      regions: [regionMap['africa'] || regionMap['middle-east']],
       author: authorMap['kojo-mensah'],
       homepageSlot: 'secondary',
-      status: 'draft',
+      status: 'published',
+      sourceLinks: defaultSources,
+      editorialReview: defaultEditorialReview,
       publishedAt: new Date(Date.now() - 3600000).toISOString(),
       readTime: 4,
       content: makeLexical([
@@ -181,11 +199,13 @@ async function seed() {
       slug: 'water-treaty-explained',
       standfirst: 'A new dynamic formula links river releases to rainfall and verified basin demand rather than fixed annual quotas.',
       dateline: 'GENEVA',
-      section: sectionMap['analysis'],
+      section: sectionMap['politics'] || sectionMap['other'],
       regions: [regionMap['europe'], regionMap['middle-east']],
       author: authorMap['tariq-mansoor'],
       homepageSlot: 'secondary',
-      status: 'draft',
+      status: 'published',
+      sourceLinks: defaultSources,
+      editorialReview: defaultEditorialReview,
       publishedAt: new Date(Date.now() - 7200000).toISOString(),
       readTime: 5,
       content: makeLexical([
@@ -199,12 +219,14 @@ async function seed() {
       slug: 'inside-election-counting-center',
       standfirst: 'High-definition cameras, parallel digital tallies, and verifiable result logs strengthen civic confidence in a close vote.',
       dateline: 'ACCRA',
-      section: sectionMap['video'],
-      regions: [regionMap['africa']],
+      section: sectionMap['politics'] || sectionMap['other'],
+      regions: [regionMap['africa'] || regionMap['middle-east']],
       author: authorMap['kojo-mensah'],
       homepageSlot: 'standard',
       isBreaking: true,
-      status: 'draft',
+      status: 'published',
+      sourceLinks: defaultSources,
+      editorialReview: defaultEditorialReview,
       publishedAt: new Date(Date.now() - 10800000).toISOString(),
       readTime: 6,
       content: makeLexical([
