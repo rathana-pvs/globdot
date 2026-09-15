@@ -1,2 +1,0 @@
-import type { MetadataRoute } from 'next';
-export default function manifest(): MetadataRoute.Manifest { return { name: 'Globdot', short_name: 'Globdot', description: 'One world. Every angle.', start_url: '/', display: 'standalone', background_color: '#f7f5ef', theme_color: '#101318' }; }

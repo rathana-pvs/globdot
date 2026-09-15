@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: globdot-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-globdot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-globdot_pass_123}
+      POSTGRES_DB: ${POSTGRES_DB:-globdot}
+    ports:
+      # Bind exclusively to localhost so database is not exposed to public internet
+      - '127.0.0.1:${POSTGRES_PORT:-5437}:5432'
+    volumes:
+      - globdot_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-globdot} -d ${POSTGRES_DB:-globdot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  globdot_db_data:

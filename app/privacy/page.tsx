@@ -1,2 +1,0 @@
-import { InfoPage } from '@/components/info-page';
-export default function PrivacyPage() { return <InfoPage eyebrow="Legal" title="Privacy" intro="This policy explains the information Globdot collects and how it is used."><h2>Information we collect</h2><p>We may collect basic usage, device and subscription information needed to operate and improve Globdot. We do not sell personal information.</p><h2>Your choices</h2><p>You may request access, correction or deletion of personal information by contacting privacy@globdot.com.</p></InfoPage>; }

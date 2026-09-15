@@ -1,42 +1,50 @@
 {
-  "name": "sites-project",
-  "version": "0.1.0",
+  "name": "globdot",
+  "version": "1.0.0",
   "private": true,
-  "engines": {
-    "node": ">=22.13.0"
-  },
+  "type": "module",
   "scripts": {
-    "dev": "vinext dev",
-    "build": "vinext build",
-    "start": "vinext start",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "dev": "next dev -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "generate:types": "payload generate:types",
+    "generate:importmap": "payload generate:importmap",
+    "seed": "cross-env PAYLOAD_CONFIG_PATH=payload.config.ts tsx src/lib/seed.ts",
+    "seed:asiandot": "tsx src/lib/seed-asiandot.ts"
   },
   "dependencies": {
-    "drizzle-orm": "0.45.2",
-    "next": "^16.3.5",
-    "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "@ai-sdk/google": "^4.0.31",
+    "@payloadcms/db-postgres": "3.82.1",
+    "@payloadcms/next": "3.82.1",
+    "@payloadcms/plugin-seo": "3.82.1",
+    "@payloadcms/richtext-lexical": "3.82.1",
+    "ai": "^7.0.48",
+    "cheerio": "^1.2.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "dotenv": "^16.4.7",
+    "graphql": "^16.8.1",
+    "next": "15.2.9",
+    "payload": "3.82.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "^0.34.5",
+    "slugify": "^1.6.6",
+    "tailwind-merge": "^2.3.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
-    "@cloudflare/workers-types": "4.20260515.1",
-    "@openai/sites-vite-plugin": "^0.1.0 || ^0.2.0",
     "@tailwindcss/postcss": "4.2.1",
-    "@types/node": "22.19.19",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "6.0.2",
-    "@vitejs/plugin-rsc": "0.5.26",
-    "drizzle-kit": "0.31.10",
-    "eslint": "9.39.4",
-    "eslint-config-next": "^16.3.5",
-    "react-server-dom-webpack": "19.2.6",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
+    "drizzle-kit": "^0.31.7",
+    "eslint": "^9",
+    "eslint-config-next": "15.2.9",
+    "postcss": "^8",
     "tailwindcss": "4.2.1",
-    "typescript": "5.9.3",
-    "vinext": "1.0.0-beta.3",
-    "vite": "8.0.13",
-    "wrangler": "4.92.0"
-  },
-  "type": "module"
+    "tsx": "^4.21.0",
+    "typescript": "^5"
+  }
 }
