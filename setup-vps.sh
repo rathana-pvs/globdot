@@ -112,8 +112,9 @@ fi
 echo -e "${YELLOW}🔒 Ensuring UFW firewall rules...${NC}"
 run_as_root ufw allow OpenSSH || run_as_root ufw allow 22/tcp
 run_as_root ufw allow 'Nginx Full' || (run_as_root ufw allow 80/tcp && run_as_root ufw allow 443/tcp)
+run_as_root ufw allow 8080/tcp || true
 echo "y" | run_as_root ufw enable || true
-echo -e "${GREEN}✓ Firewall rules configured (SSH, HTTP, HTTPS enabled; DB port 5437 is protected).${NC}"
+echo -e "${GREEN}✓ Firewall rules configured (SSH, HTTP, HTTPS, 8080 enabled; DB port 5437 is protected).${NC}"
 
 # ---------------------------------------------------------
 # 8. ENVIRONMENT VARIABLES & SECRETS SETUP

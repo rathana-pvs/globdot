@@ -1,9 +1,11 @@
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
+
 module.exports = {
   apps: [
     {
       name: 'globdot',
       script: 'node_modules/next/dist/bin/next',
-      args: 'start -p 3000 -H 127.0.0.1',
+      args: `start -p ${PORT} -H 127.0.0.1`,
       cwd: './',
       // Default to 1 instance to avoid memory duplication on low-spec VPS (e.g. 1-2GB RAM).
       // Can be overridden via PM2_INSTANCES=2 or 'max' on multi-core servers.
@@ -22,11 +24,11 @@ module.exports = {
       merge_logs: true,
       env: {
         NODE_ENV: 'development',
-        PORT: 3000,
+        PORT: PORT,
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 3000,
+        PORT: PORT,
       },
     },
   ],

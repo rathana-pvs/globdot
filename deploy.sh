@@ -46,11 +46,12 @@ pm2 reload ecosystem.config.cjs --env production || pm2 start ecosystem.config.c
 pm2 save
 
 # 7. Health Check
-echo -e "${YELLOW}🔍 Performing health check...${NC}"
+APP_PORT="${PORT:-3001}"
+echo -e "${YELLOW}🔍 Performing health check on port ${APP_PORT}...${NC}"
 HEALTHY=false
 for i in {1..10}; do
     sleep 2
-    if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/ | grep -qE "200|301|302|307|308"; then
+    if curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT}/" | grep -qE "200|301|302|307|308"; then
         HEALTHY=true
         break
     fi
