@@ -223,7 +223,7 @@ async function seed() {
       regions: [regionMap['africa'] || regionMap['middle-east']],
       author: authorMap['kojo-mensah'],
       homepageSlot: 'standard',
-      isBreaking: true,
+      isBreaking: false,
       status: 'published',
       sourceLinks: defaultSources,
       editorialReview: defaultEditorialReview,
