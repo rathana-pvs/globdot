@@ -50,7 +50,7 @@ async function uploadMediaToProd(
 ): Promise<string | number | null> {
   try {
     const formData = new FormData();
-    formData.append('file', new Blob([fileBuffer], { type: contentType }), filename);
+    formData.append('file', new Blob([new Uint8Array(fileBuffer)], { type: contentType }), filename);
     formData.append(
       '_payload',
       JSON.stringify({
