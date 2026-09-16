@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { StoryCard } from '@/components/story-card';
 import { getPublishedArticles } from '@/lib/api-server';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'All news — Globdot',

@@ -1,0 +1,32 @@
+<svg width="320" height="80" viewBox="0 0 320 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>GLOB.DOT — World News &amp; Analyze</title>
+  <defs>
+    <style>
+      .brand-name {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-weight: 900;
+        font-size: 32px;
+        letter-spacing: -0.6px;
+        fill: #101318;
+      }
+      .brand-tagline {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-weight: 700;
+        font-size: 8.5px;
+        letter-spacing: 3px;
+        fill: #62666D;
+      }
+    </style>
+  </defs>
+
+  <!-- Geometric G Emblem -->
+  <g aria-hidden="true">
+    <path d="M 28.08 14.0 L 16.53 24.55 L 12.05 55.63 L 22.24 55.63 L 20.89 66.0 L 45.12 66.0 L 49.26 65.29 L 55.1 62.58 L 60.45 57.65 L 63.88 51.52 L 65.45 44.24 L 66.52 34.76 L 36.39 34.76 L 34.82 45.17 L 54.38 45.17 L 52.45 49.52 L 48.24 53.59 L 43.39 55.44 L 22.31 55.59 L 26.66 24.41 L 47.43 24.34 L 49.22 14.0 Z" fill="#101318"/>
+    <!-- Crimson Beacon Dot -->
+    <circle cx="59.79" cy="21.7" r="7.7" fill="#DA0B3F"/>
+  </g>
+
+  <!-- Typography -->
+  <text x="78" y="44" class="brand-name">GLOB<tspan fill="#DA0B3F">.</tspan>DOT</text>
+  <text x="79" y="62" class="brand-tagline">WORLD NEWS &amp; ANALYZE</text>
+</svg>

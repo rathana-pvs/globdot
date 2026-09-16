@@ -1,0 +1,16 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Globdot GD monogram concept</title>
+  <rect width="256" height="256" rx="48" fill="#101318"/>
+  <defs>
+    <mask id="g-cut">
+      <rect width="256" height="256" fill="black"/>
+      <circle cx="83" cy="128" r="66" fill="white"/>
+      <circle cx="83" cy="128" r="39" fill="black"/>
+      <rect x="83" y="96" width="66" height="31" fill="black"/>
+      <rect x="80" y="119" width="61" height="22" fill="white"/>
+    </mask>
+  </defs>
+  <rect x="17" y="62" width="132" height="132" fill="#F7F5EF" mask="url(#g-cut)"/>
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M125 62H157C207 62 235 88 235 128C235 168 207 194 157 194H125V62ZM153 88V168H158C188 168 206 154 206 128C206 102 188 88 158 88H153Z" fill="#F7F5EF"/>
+  <circle cx="220" cy="53" r="13" fill="#F04438"/>
+</svg>

@@ -1,7 +1,22 @@
 import { type CollectionConfig, APIError } from 'payload';
 import { lexicalEditor, FixedToolbarFeature, HeadingFeature, HorizontalRuleFeature, UploadFeature } from '@payloadcms/richtext-lexical';
 import { slugify, cleanArticleSlug, calcReadTime } from '../lib/utils';
-import { revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+
+const revalidateArticlePages = (doc?: any, previousDoc?: any) => {
+  revalidateTag('articles');
+  revalidatePath('/');
+  revalidatePath('/news');
+  revalidatePath('/section/[slug]', 'page');
+  revalidatePath('/region/[slug]', 'page');
+  revalidatePath('/rss.xml');
+  revalidatePath('/sitemap.xml');
+
+  if (doc?.slug) revalidatePath(`/article/${doc.slug}`);
+  if (previousDoc?.slug && previousDoc.slug !== doc?.slug) {
+    revalidatePath(`/article/${previousDoc.slug}`);
+  }
+};
 
 const validateSourceUrl = (value: string | null | undefined) => {
   if (!value) return 'A source URL is required.';
@@ -102,9 +117,17 @@ export const Articles: CollectionConfig = {
       },
     ],
     afterChange: [
+      async ({ doc, previousDoc }) => {
+        try {
+          revalidateArticlePages(doc, previousDoc);
+        } catch {}
+        return doc;
+      },
+    ],
+    afterDelete: [
       async ({ doc }) => {
         try {
-          revalidateTag('articles');
+          revalidateArticlePages(doc);
         } catch {}
         return doc;
       },

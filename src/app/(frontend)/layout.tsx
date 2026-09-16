@@ -22,9 +22,9 @@ export const metadata: Metadata = {
   title: 'Globdot — One world. Every angle.',
   description: 'Independent global news, context and analysis connecting the events shaping our world.',
   icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
+    icon: '/globdot-icon.svg',
+    shortcut: '/globdot-icon.svg',
+    apple: '/globdot-icon.svg',
   },
   openGraph: {
     title: 'Globdot — One world. Every angle.',

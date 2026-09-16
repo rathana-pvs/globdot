@@ -34,21 +34,25 @@ export const getPublishedArticles = unstable_cache(
   { tags: ['articles'], revalidate: 60 }
 );
 
-export const getArticleBySlug = async (slug: string): Promise<ArticleDoc | null> => {
-  try {
-    const payload = await getPayloadClient();
-    const result = await payload.find({
-      collection: 'articles',
-      where: { and: [{ slug: { equals: slug } }, publicationWhere] },
-      limit: 1,
-      depth: 2,
-    });
-    return result.docs[0] || null;
-  } catch (e) {
-    console.warn(`Failed to fetch article slug=${slug}:`, e);
-    return null;
-  }
-};
+export const getArticleBySlug = unstable_cache(
+  async (slug: string): Promise<ArticleDoc | null> => {
+    try {
+      const payload = await getPayloadClient();
+      const result = await payload.find({
+        collection: 'articles',
+        where: { and: [{ slug: { equals: slug } }, publicationWhere] },
+        limit: 1,
+        depth: 2,
+      });
+      return result.docs[0] || null;
+    } catch (e) {
+      console.warn(`Failed to fetch article slug=${slug}:`, e);
+      return null;
+    }
+  },
+  ['article-by-slug'],
+  { tags: ['articles'], revalidate: 60 }
+);
 
 export const getArticlesBySection = unstable_cache(
   async (sectionSlug: string, limit = 24) => {

@@ -3,8 +3,14 @@ import { notFound } from 'next/navigation';
 import { ChannelPage } from '@/components/channel-page';
 import { getArticlesBySection } from '@/lib/api-server';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
+export const dynamicParams = true;
+export const revalidate = 60;
 type Props = { params: Promise<{ slug: string }> };
+
+export function generateStaticParams() {
+  return ['politics', 'war-tension', 'climate', 'tech', 'other'].map((slug) => ({ slug }));
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

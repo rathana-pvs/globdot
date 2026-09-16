@@ -5,7 +5,8 @@ import { StoryVisual } from '@/components/story-visual';
 import { getPublishedArticles } from '@/lib/api-server';
 import { formatTime, formatDate, getMediaUrl } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
+export const revalidate = 60;
 
 function getPrimaryRegionName(story: any): string {
   const regions = Array.isArray(story?.regions) ? story.regions : [];
@@ -147,19 +148,41 @@ export default async function Home() {
               </div>
 
               <div className="briefing-stories">
-                {secondary.map((story: any) => (
+                {secondary.map((story: any, index: number) => {
+                  const imageUrl = story?.coverImage ? getMediaUrl(story.coverImage, '') : '';
+
+                  return (
                   <article className="briefing-story" key={story.id}>
-                    <span className="kicker">{story.section?.name || 'World'}</span>
-                    <Link href={`/article/${story.slug}`}>
-                      <h3>{story.title}</h3>
+                    <Link href={`/article/${story.slug}`} className="briefing-visual-link">
+                      <div className="briefing-visual">
+                        {imageUrl ? (
+                          <Image
+                            src={imageUrl}
+                            alt={story.coverImage?.alt || ''}
+                            fill
+                            sizes="(max-width: 820px) 38vw, 320px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <StoryVisual section={story.section?.slug || 'world'} compact />
+                        )}
+                        {index === 0 && <span className="briefing-image-label">Top story</span>}
+                      </div>
                     </Link>
-                    {story.standfirst && <p className="briefing-standfirst">{story.standfirst}</p>}
-                    <div className="story-meta">
-                      <span>{story.readTime || 3} min read</span>
-                      <span>{formatTime(story.publishedAt)}</span>
+                    <div className="briefing-copy">
+                      <span className="kicker">{story.section?.name || 'World'}</span>
+                      <Link href={`/article/${story.slug}`}>
+                        <h3>{story.title}</h3>
+                      </Link>
+                      {index === 0 && story.standfirst && <p className="briefing-standfirst">{story.standfirst}</p>}
+                      <div className="story-meta">
+                        <span>{story.readTime || 3} min read</span>
+                        <span>{formatTime(story.publishedAt)}</span>
+                      </div>
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             </aside>
 
@@ -202,6 +225,21 @@ export default async function Home() {
             <div className="in-depth-grid">
               {inDepth.map((story: any) => (
                 <article className="in-depth-story" key={story.id}>
+                  <Link href={`/article/${story.slug}`} className="in-depth-visual-link">
+                    <div className="in-depth-visual">
+                      {story?.coverImage ? (
+                        <Image
+                          src={getMediaUrl(story.coverImage, '')}
+                          alt={story.coverImage?.alt || ''}
+                          fill
+                          sizes="(max-width: 820px) calc(100vw - 32px), 50vw"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <StoryVisual section={story.section?.slug || 'analysis'} compact />
+                      )}
+                    </div>
+                  </Link>
                   <div className="in-depth-body">
                     <span className="kicker">{story.section?.name || 'Analysis'}</span>
                     <Link href={`/article/${story.slug}`}>
@@ -230,18 +268,35 @@ export default async function Home() {
             <div className="perspectives-grid">
               {perspectives.map((story: any) => (
                 <article className="perspective-item" key={story.id}>
-                  <span className="perspective-author">
-                    By {story.author?.name || story.author || 'Globdot News Desk'}
-                  </span>
-                  <Link href={`/article/${story.slug}`}>
-                    <h3 className="perspective-title">{story.title}</h3>
+                  <Link href={`/article/${story.slug}`} className="perspective-visual-link">
+                    <div className="perspective-visual">
+                      {story?.coverImage ? (
+                        <Image
+                          src={getMediaUrl(story.coverImage, '')}
+                          alt={story.coverImage?.alt || ''}
+                          fill
+                          sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 820px) 34vw, 420px"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <StoryVisual section={story.section?.slug || 'opinion'} compact />
+                      )}
+                    </div>
                   </Link>
-                  {story.standfirst && (
-                    <p className="perspective-excerpt">{story.standfirst}</p>
-                  )}
-                  <div className="perspective-meta">
-                    <span className="kicker">{story.section?.name || 'Opinion'}</span>
-                    <span className="perspective-read">{story.readTime || 4} min read</span>
+                  <div className="perspective-body">
+                    <span className="perspective-author">
+                      By {story.author?.name || story.author || 'Globdot News Desk'}
+                    </span>
+                    <Link href={`/article/${story.slug}`}>
+                      <h3 className="perspective-title">{story.title}</h3>
+                    </Link>
+                    {story.standfirst && (
+                      <p className="perspective-excerpt">{story.standfirst}</p>
+                    )}
+                    <div className="perspective-meta">
+                      <span className="kicker">{story.section?.name || 'Opinion'}</span>
+                      <span className="perspective-read">{story.readTime || 4} min read</span>
+                    </div>
                   </div>
                 </article>
               ))}

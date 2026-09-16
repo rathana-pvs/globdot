@@ -6,12 +6,18 @@ import { StoryVisual } from '@/components/story-visual';
 import { StoryCard } from '@/components/story-card';
 import { RichText } from '@/components/RichText';
 import { AdSlot } from '@/components/ad-slot';
-import { ArticleShareBar } from '@/components/article-share-bar';
 import { getArticleBySlug, getArticlesBySection, getPublishedArticles } from '@/lib/api-server';
 import { formatDate, getMediaUrl } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
+export const dynamicParams = true;
+export const revalidate = 60;
 type Props = { params: Promise<{ slug: string }> };
+
+// Articles are generated on their first request, then served from the ISR cache.
+export function generateStaticParams() {
+  return [];
+}
 
 const formatLabels: Record<string, string> = {
   news: 'News',
@@ -152,7 +158,7 @@ export default async function ArticlePage({ params }: Props) {
       url: siteUrl,
       logo: {
         '@type': 'ImageObject',
-        url: `${siteUrl}/favicon.svg`,
+        url: `${siteUrl}/globdot-icon.svg`,
       },
     },
     articleSection: sectionName,
@@ -192,15 +198,8 @@ export default async function ArticlePage({ params }: Props) {
           <span>{storyType === 'opinion' ? 'Commentary by' : 'By'} <strong>{authorName}</strong></span>
           {story.dateline && <span>{story.dateline}</span>}
           <span>{formatDate(story.publishedAt, 'MMMM d, yyyy')}</span>
-          <span>{story.readTime || 3} min read</span>
         </div>
 
-        <ArticleShareBar
-          title={story.title}
-          url={articleUrl}
-          readTime={story.readTime || 3}
-          sectionName={sectionName}
-        />
       </header>
 
       <div className="article-layout">
@@ -329,20 +328,6 @@ export default async function ArticlePage({ params }: Props) {
         </article>
 
         <aside className="article-rail" aria-label="Editorial sidebar">
-          <div className="rail-section-card">
-            <div className="rail-desk-badge">
-              <span className="desk-indicator" style={{ backgroundColor: sectionColor }} />
-              <span>{sectionName} Desk</span>
-            </div>
-            <p className="rail-desk-desc">
-              {sectionData?.description ||
-                `Authoritative reporting, analysis, and accountability journalism covering ${sectionName.toLowerCase()}.`}
-            </p>
-            <Link href={`/section/${sectionSlug}`} className="rail-section-link">
-              View all {sectionName} reporting →
-            </Link>
-          </div>
-
           {railStories.length > 0 && (
             <div className="rail-desk-stories">
               <div className="rail-subheading">
