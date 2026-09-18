@@ -454,7 +454,7 @@ async function collectMultiSourceEvidence(input: string) {
 
     const res = await generateText({
       model: googleAI(PRIMARY_MODEL_ID),
-      tools: { googleSearch: (googleAI as any).tools.googleSearch() },
+      tools: { googleSearch: (googleAI as any).tools.googleSearch({}) },
       prompt,
     });
     const parsed = extractJsonFromText(res.text);
