@@ -11,6 +11,15 @@ export function StoryCard({ story, horizontal = false }: { story: any; horizonta
   const authorName = story.author?.name || story.author || 'Globdot News Desk';
   const imageUrl = story?.coverImage ? getMediaUrl(story.coverImage, '') : '';
 
+  const focalPos =
+    story.coverFocalPosition === 'top' || story.coverImage?.focalPosition === 'top'
+      ? '50% 18%'
+      : story.coverFocalPosition === 'bottom' || story.coverImage?.focalPosition === 'bottom'
+      ? '50% 82%'
+      : story.coverFocalPosition === 'center' || story.coverImage?.focalPosition === 'center'
+      ? '50% 50%'
+      : '50% 25%';
+
   return (
     <article className={`story-card${horizontal ? ' horizontal' : ''}`}>
       <Link href={`/article/${story.slug}`} className="card-visual-link block">
@@ -22,6 +31,7 @@ export function StoryCard({ story, horizontal = false }: { story: any; horizonta
               fill
               sizes="(max-width: 720px) 100vw, (max-width: 1050px) 50vw, 320px"
               className="object-cover transition-transform duration-300 hover:scale-105"
+              style={{ objectPosition: focalPos }}
             />
           ) : (
             <StoryVisual section={sectionSlug} compact />

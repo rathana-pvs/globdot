@@ -215,6 +215,44 @@ export const Articles: CollectionConfig = {
     },
     { name: 'coverImage', type: 'upload', relationTo: 'media' },
     {
+      type: 'row',
+      admin: {
+        condition: (data) => Boolean(data?.coverImage),
+      },
+      fields: [
+        {
+          name: 'coverDisplayMode',
+          type: 'select',
+          defaultValue: 'auto',
+          admin: {
+            width: '50%',
+            description: 'Cover presentation style',
+          },
+          options: [
+            { label: 'Auto (Ambient blur for portrait/square, banner for landscape)', value: 'auto' },
+            { label: 'Ambient Backdrop (Full uncropped photo + soft blurred background)', value: 'ambient' },
+            { label: 'Crop Banner (Standard 16:10 wide banner)', value: 'banner' },
+          ],
+        },
+        {
+          name: 'coverFocalPosition',
+          type: 'select',
+          defaultValue: 'auto',
+          admin: {
+            width: '50%',
+            description: 'Vertical focal point when cropped',
+            condition: (data) => data?.coverDisplayMode !== 'ambient',
+          },
+          options: [
+            { label: 'Auto (Top for people & portraits)', value: 'auto' },
+            { label: 'Top / Face', value: 'top' },
+            { label: 'Center', value: 'center' },
+            { label: 'Bottom', value: 'bottom' },
+          ],
+        },
+      ],
+    },
+    {
       name: 'sourceLinks',
       label: 'Sources',
       type: 'array',

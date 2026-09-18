@@ -114,6 +114,20 @@ export const Media: CollectionConfig = {
       admin: { position: 'sidebar' },
     },
     {
+      name: 'focalPosition',
+      type: 'select',
+      defaultValue: 'top',
+      options: [
+        { label: 'Top / Face (Recommended for people & portraits)', value: 'top' },
+        { label: 'Center (Standard)', value: 'center' },
+        { label: 'Bottom', value: 'bottom' },
+      ],
+      admin: {
+        position: 'sidebar',
+        description: 'Default focus position when cropped to a banner',
+      },
+    },
+    {
       name: 'externalUrl',
       type: 'text',
       admin: {

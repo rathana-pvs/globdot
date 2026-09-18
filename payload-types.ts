@@ -167,6 +167,14 @@ export interface Article {
   } | null;
   coverImage?: (number | null) | Media;
   /**
+   * Cover presentation style
+   */
+  coverDisplayMode?: ('auto' | 'ambient' | 'banner') | null;
+  /**
+   * Vertical focal point when cropped
+   */
+  coverFocalPosition?: ('auto' | 'top' | 'center' | 'bottom') | null;
+  /**
    * Direct links to primary documents or reporting used for this article.
    */
   sourceLinks?:
@@ -251,6 +259,10 @@ export interface Media {
    */
   credit?: string | null;
   source?: ('local' | 'external') | null;
+  /**
+   * Default focus position when cropped to a banner
+   */
+  focalPosition?: ('top' | 'center' | 'bottom') | null;
   /**
    * Direct link to an external image
    */
@@ -549,6 +561,8 @@ export interface ArticlesSelect<T extends boolean = true> {
   reportingNotes?: T;
   content?: T;
   coverImage?: T;
+  coverDisplayMode?: T;
+  coverFocalPosition?: T;
   sourceLinks?:
     | T
     | {
@@ -647,6 +661,7 @@ export interface MediaSelect<T extends boolean = true> {
   caption?: T;
   credit?: T;
   source?: T;
+  focalPosition?: T;
   externalUrl?: T;
   updatedAt?: T;
   createdAt?: T;

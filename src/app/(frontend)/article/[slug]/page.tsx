@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { StoryVisual } from '@/components/story-visual';
 import { StoryCard } from '@/components/story-card';
+import { ArticleLeadImage } from '@/components/article-lead-image';
 import { RichText } from '@/components/RichText';
 import { AdSlot } from '@/components/ad-slot';
 import { getArticleBySlug, getArticlesBySection, getPublishedArticles } from '@/lib/api-server';
@@ -212,16 +212,13 @@ export default async function ArticlePage({ params }: Props) {
           )}
           {imageUrl ? (
             <figure className="article-lead-figure">
-              <div className="article-lead-visual relative overflow-hidden">
-                <Image
-                  src={imageUrl}
-                  alt={story.coverImage?.alt || story.title}
-                  fill
-                  priority
-                  sizes="(max-width: 900px) 100vw, 880px"
-                  className="object-cover"
-                />
-              </div>
+              <ArticleLeadImage
+                imageUrl={imageUrl}
+                alt={story.coverImage?.alt || story.title}
+                displayMode={story.coverDisplayMode || 'auto'}
+                focalPosition={story.coverFocalPosition || 'auto'}
+                imageMeta={typeof story.coverImage === 'object' ? story.coverImage : undefined}
+              />
               {(story.coverImage?.caption || story.coverImage?.credit || story.dateline) && (
                 <figcaption className="article-lead-caption">
                   <span>
