@@ -420,34 +420,41 @@ async function collectMultiSourceEvidence(input: string) {
   // 1. Google Search Grounding with Gemini (fast, multi-source, verified citations)
   try {
     const googleAI = getGoogleAI();
-    const prompt = `The editor submitted this news story / topic:
-Headline: "${origin.title}"
-${origin.url ? `Origin URL: ${origin.url} (${origin.name})` : ''}
-
-Find 2 to 4 separate corroborating news reports from distinct major international publishers (e.g., Reuters, AP News, BBC, CNN, The New York Times, The Washington Post, The Guardian, Axios, Bloomberg, etc.) covering this exact story.
-For each report, provide:
-- Publisher Name
-- Article URL (use a canonical URL or main publisher article URL)
-- Headline
-- Description (standfirst or summary)
-- Content (verified factual details, quotes, and background)
-
-Return JSON with this schema:
-{
-  "sources": [
-    {
-      "name": "Reuters",
-      "url": "https://www.reuters.com/...",
-      "title": "Headline",
-      "description": "Short summary",
-      "content": "Factual details reported..."
-    }
-  ]
-}
-Return valid JSON only.`;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const publishedHint = origin.publishedAt ? origin.publishedAt.slice(0, 10) : todayStr;
+    const searchFromDate = new Date(publishedHint);
+    searchFromDate.setDate(searchFromDate.getDate() - 3);
+    const searchFromStr = searchFromDate.toISOString().slice(0, 10);
+    const prompt = `Today's date is ${todayStr}. The editor submitted this news story / topic:\n` +
+      `Headline: "${origin.title}"\n` +
+      (origin.url ? `Origin URL: ${origin.url} (${origin.name})\n` : '') +
+      `Story date: ${publishedHint}\n` +
+      `\n` +
+      `Find 2 to 4 separate corroborating news reports published on or after ${searchFromStr} from distinct major international publishers (e.g., Reuters, AP News, BBC, CNN, The New York Times, The Washington Post, The Guardian, Axios, Bloomberg, etc.) covering this exact story. Do NOT use sources from before ${searchFromStr}.\n` +
+      `For each report, provide:\n` +
+      `- Publisher Name\n` +
+      `- Article URL (use a canonical URL or main publisher article URL)\n` +
+      `- Headline\n` +
+      `- Description (standfirst or summary)\n` +
+      `- Content (verified factual details, quotes, and background)\n` +
+      `\n` +
+      `Return JSON with this schema:\n` +
+      `{\n` +
+      `  "sources": [\n` +
+      `    {\n` +
+      `      "name": "Reuters",\n` +
+      `      "url": "https://www.reuters.com/...",\n` +
+      `      "title": "Headline",\n` +
+      `      "description": "Short summary",\n` +
+      `      "content": "Factual details reported..."\n` +
+      `    }\n` +
+      `  ]\n` +
+      `}\n` +
+      `Return valid JSON only.`;
 
     const res = await generateText({
-      model: (googleAI as any)(PRIMARY_MODEL_ID, { useSearchGrounding: true }),
+      model: googleAI(PRIMARY_MODEL_ID),
+      tools: { googleSearch: (googleAI as any).tools.googleSearch() },
       prompt,
     });
     const parsed = extractJsonFromText(res.text);
