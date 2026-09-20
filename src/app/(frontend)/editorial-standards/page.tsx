@@ -52,7 +52,7 @@ export default function StandardsPage() {
       <p>
         Substantive errors are corrected promptly with a dated explanation on the affected article. To report an
         error, follow our <Link href="/corrections">Corrections Policy</Link> or email{' '}
-        <a href="mailto:yourssmiara@gmail.com">yourssmiara@gmail.com</a>.
+        <a href="mailto:corrections@globdot.com">corrections@globdot.com</a>.
       </p>
     </InfoPage>
   );

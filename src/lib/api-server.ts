@@ -184,3 +184,31 @@ export const getNavigationSections = unstable_cache(
   ['navigation-sections'],
   { tags: ['sections'], revalidate: 300 }
 );
+
+export const getAllRegions = unstable_cache(
+  async () => {
+    try {
+      const payload = await getPayloadClient();
+      const res = await payload.find({
+        collection: 'regions',
+        where: { isVisible: { equals: true } },
+        sort: 'sortOrder',
+        limit: 20,
+      });
+      return res.docs;
+    } catch (e) {
+      console.warn('Failed to fetch regions:', e);
+      return [
+        { id: 1, name: 'Americas', slug: 'americas', description: 'Dispatches, governance, and policy from North, Central, and South America.' },
+        { id: 2, name: 'Asia', slug: 'asia', description: 'Technological shifts, supply chain economics, and geopolitical dynamics across the Asia-Pacific.' },
+        { id: 3, name: 'Europe', slug: 'europe', description: 'Institutional developments, diplomatic treaties, and cross-border security across Europe.' },
+        { id: 4, name: 'Middle East', slug: 'middle-east', description: 'Energy transition, regional security pacts, and economic diversification across the Gulf and Levant.' },
+        { id: 5, name: 'Africa', slug: 'africa', description: 'Ecosystem adaptation, emerging digital infrastructure, and trade agreements across the African continent.' },
+        { id: 6, name: 'Oceania', slug: 'oceania', description: 'Pacific maritime boundaries, ecological resilience, and resource governance.' },
+      ];
+    }
+  },
+  ['all-regions'],
+  { tags: ['regions'], revalidate: 300 }
+);
+

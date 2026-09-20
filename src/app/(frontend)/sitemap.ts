@@ -9,6 +9,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPaths = [
     '',
     '/about',
+    '/masthead',
+    '/regions',
     '/contact',
     '/corrections',
     '/editorial-standards',
@@ -28,6 +30,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     'asia',
     'europe',
     'middle-east',
+    'africa',
+    'oceania',
   ].map((slug) => `/region/${slug}`);
 
   const pages: MetadataRoute.Sitemap = [
@@ -40,8 +44,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === '' ? 1 : 0.7,
   }));
 
+  const cleanStories = stories.filter(
+    (story) =>
+      story?.slug &&
+      !story.slug.endsWith('-test') &&
+      !story.slug.includes('-test-') &&
+      !story.title?.toLowerCase().includes('[test]')
+  );
+
   return pages.concat(
-    stories.map((story) => ({
+    cleanStories.map((story) => ({
       url: `${origin}/article/${story.slug}`,
       lastModified: story.publishedAt ? new Date(story.publishedAt) : undefined,
       changeFrequency: 'daily' as const,

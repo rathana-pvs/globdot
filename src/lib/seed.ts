@@ -84,11 +84,51 @@ async function seed() {
 
   // 4. Seed Authors
   const defaultAuthors = [
-    { name: 'Globdot Administrator', slug: 'globdot-administrator', roleTitle: 'Editor-in-Chief', email: 'admin@globdot.com' },
-    { name: 'Elena Rostova', slug: 'elena-rostova', roleTitle: 'Senior Foreign Correspondent', email: 'elena.rostova@globdot.com' },
-    { name: 'Tariq Mansoor', slug: 'tariq-mansoor', roleTitle: 'Middle East & Energy Bureau Chief', email: 'tariq.mansoor@globdot.com' },
-    { name: 'Mei Lin Zhou', slug: 'mei-lin-zhou', roleTitle: 'Technology & Trade Reporter', email: 'mei-lin.zhou@globdot.com' },
-    { name: 'Kojo Mensah', slug: 'kojo-mensah', roleTitle: 'West Africa Correspondent', email: 'kojo.mensah@globdot.com' },
+    {
+      name: 'Elena Rostova',
+      slug: 'elena-rostova',
+      roleTitle: 'Senior Foreign Correspondent',
+      email: 'elena.rostova@globdot.com',
+      bio: 'Elena Rostova is a senior foreign correspondent based in Geneva, reporting on European diplomacy, cross-border security compacts, and international treaty negotiations. She previously covered multilateral affairs for continental wire services and holds an advanced degree in international law.',
+      socialUrl: 'https://x.com/globdotnews',
+      isActive: true,
+    },
+    {
+      name: 'Tariq Mansoor',
+      slug: 'tariq-mansoor',
+      roleTitle: 'Middle East & Energy Bureau Chief',
+      email: 'tariq.mansoor@globdot.com',
+      bio: 'Tariq Mansoor directs Globdot coverage of the Middle East, Gulf sovereign capital, and regional energy transition from Abu Dhabi. His investigations explore strategic water infrastructure, solar desalination initiatives, and Red Sea maritime security protocols.',
+      socialUrl: 'https://x.com/globdotnews',
+      isActive: true,
+    },
+    {
+      name: 'Mei Lin Zhou',
+      slug: 'mei-lin-zhou',
+      roleTitle: 'Technology & Trade Reporter',
+      email: 'mei-lin.zhou@globdot.com',
+      bio: 'Mei Lin Zhou reports on semiconductor manufacturing supply chains, frontier artificial intelligence governance, and digital currency trials across the Asia-Pacific. She is based between Singapore and Tokyo.',
+      socialUrl: 'https://x.com/globdotnews',
+      isActive: true,
+    },
+    {
+      name: 'Kojo Mensah',
+      slug: 'kojo-mensah',
+      roleTitle: 'West Africa & Development Correspondent',
+      email: 'kojo.mensah@globdot.com',
+      bio: 'Kojo Mensah is Globdot West Africa correspondent based in Accra. He specializes in reporting on agrarian climate adaptation, civic election transparency technologies, and emerging pan-African trade compacts.',
+      socialUrl: 'https://x.com/globdotnews',
+      isActive: true,
+    },
+    {
+      name: 'Globdot Newsroom Desk',
+      slug: 'globdot-administrator',
+      roleTitle: 'Editorial Newsroom Desk',
+      email: 'editorial@globdot.com',
+      bio: 'The Globdot Editorial Newsroom Desk coordinates breaking wire reports, multi-bureau investigations, and round-the-clock global monitoring from our central assignment editors.',
+      socialUrl: 'https://x.com/globdotnews',
+      isActive: true,
+    },
   ];
 
   const authorMap: Record<string, string | number> = {};
@@ -100,6 +140,18 @@ async function seed() {
     });
     if (existing.docs.length > 0) {
       authorMap[a.slug] = existing.docs[0].id;
+      if (!existing.docs[0].bio) {
+        console.log(`✍️ Updating author profile: ${a.name}`);
+        await payload.update({
+          collection: 'authors',
+          id: existing.docs[0].id,
+          data: {
+            bio: a.bio,
+            roleTitle: a.roleTitle,
+            socialUrl: a.socialUrl,
+          },
+        });
+      }
     } else {
       console.log(`✍️ Creating author: ${a.name}`);
       const doc = await payload.create({

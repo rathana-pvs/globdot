@@ -296,7 +296,7 @@ async function searchWikimediaPressPhoto(searchQuery: string): Promise<{
         q,
       )}&gsrnamespace=6&prop=imageinfo&iiprop=url|extmetadata|size&format=json`;
       const res = await fetch(searchUrl, {
-        headers: { 'User-Agent': 'GlobdotNews/1.0 (yourssmiara@gmail.com)' },
+        headers: { 'User-Agent': 'GlobdotNews/1.0 (editorial@globdot.com)' },
         signal: AbortSignal.timeout(8_000),
       });
       if (!res.ok) continue;
@@ -332,7 +332,7 @@ async function createLegalEditorialCoverImage(payload: any, searchKeyword: strin
     if (!photo) return null;
 
     const imgRes = await fetch(photo.url, {
-      headers: { 'User-Agent': 'GlobdotNews/1.0 (yourssmiara@gmail.com)' },
+      headers: { 'User-Agent': 'GlobdotNews/1.0 (editorial@globdot.com)' },
       signal: AbortSignal.timeout(15_000),
     });
     if (!imgRes.ok) return null;

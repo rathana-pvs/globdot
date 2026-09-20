@@ -42,7 +42,7 @@ export const Media: CollectionConfig = {
     defaultColumns: ['filename', 'alt', 'credit', 'createdAt'],
   },
   access: {
-    read: () => true,
+    read: ({ req }) => !!req.user,
     create: ({ req }) => !!req.user,
     update: ({ req }) => (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'editor',
     delete: ({ req }) => (req.user as any)?.role === 'admin',

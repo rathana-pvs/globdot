@@ -9,7 +9,7 @@ export const Authors: CollectionConfig = {
     description: 'Globdot correspondents, contributors, and byline authors.',
   },
   access: {
-    read: () => true,
+    read: ({ req }) => !!req.user,
     create: ({ req }) => (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'editor',
     update: ({ req }) => (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'editor',
     delete: ({ req }) => (req.user as any)?.role === 'admin',
@@ -30,7 +30,13 @@ export const Authors: CollectionConfig = {
     { name: 'roleTitle', type: 'text', admin: { description: 'e.g. "Senior Climate Correspondent"' } },
     { name: 'bio', type: 'textarea' },
     { name: 'avatar', type: 'upload', relationTo: 'media' },
-    { name: 'email', type: 'email' },
+    {
+      name: 'email',
+      type: 'email',
+      access: {
+        read: ({ req }) => (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'editor',
+      },
+    },
     { name: 'socialUrl', type: 'text' },
     { name: 'isActive', type: 'checkbox', defaultValue: true },
   ],

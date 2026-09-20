@@ -37,7 +37,7 @@ export function SiteHeader() {
         </div>
         <nav className="shell primary-nav" aria-label="Primary navigation">
           {channels.map(([label, href]) => {
-            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
+            const isActive = href === '/' ? pathname === '/' : Boolean(pathname?.startsWith(href));
             return (
               <Link
                 href={href}
@@ -51,7 +51,71 @@ export function SiteHeader() {
           })}
         </nav>
       </header>
-      {menuOpen && <div className="menu-drawer" id="site-menu"><div className="shell menu-drawer-grid"><div><span>Sections</span>{channels.map(([label,href]) => <Link href={href} onClick={() => setMenuOpen(false)} key={href}>{label}</Link>)}</div><div><span>Regions</span>{[['Americas','americas'],['Asia','asia'],['Europe','europe'],['Middle East','middle-east']].map(([label,slug]) => <Link href={`/region/${slug}`} onClick={() => setMenuOpen(false)} key={slug}>{label}</Link>)}</div><div><span>About</span><Link href="/about" onClick={() => setMenuOpen(false)}>About Globdot</Link><Link href="/editorial-standards" onClick={() => setMenuOpen(false)}>Editorial standards</Link><Link href="/corrections" onClick={() => setMenuOpen(false)}>Corrections</Link><Link href="/contact" onClick={() => setMenuOpen(false)}>Contact</Link></div></div></div>}
+      {menuOpen && (
+        <div className="menu-drawer" id="site-menu">
+          <div className="shell menu-drawer-grid">
+            <div>
+              <span>Sections</span>
+              {channels.map(([label, href]) => (
+                <Link href={href} onClick={() => setMenuOpen(false)} key={href}>
+                  {label}
+                </Link>
+              ))}
+            </div>
+            <div>
+              <span>Regions</span>
+              {[
+                ['Americas', 'americas'],
+                ['Asia', 'asia'],
+                ['Europe', 'europe'],
+                ['Middle East', 'middle-east'],
+                ['Africa', 'africa'],
+                ['Oceania', 'oceania'],
+              ].map(([label, slug]) => (
+                <Link href={`/region/${slug}`} onClick={() => setMenuOpen(false)} key={slug}>
+                  {label}
+                </Link>
+              ))}
+              <Link href="/regions" onClick={() => setMenuOpen(false)} style={{ fontWeight: 600 }}>
+                All Regions →
+              </Link>
+            </div>
+            <div>
+              <span>About &amp; Standards</span>
+              <Link href="/about" onClick={() => setMenuOpen(false)}>
+                About Globdot
+              </Link>
+              <Link href="/masthead" onClick={() => setMenuOpen(false)}>
+                Editorial Masthead
+              </Link>
+              <Link href="/editorial-standards" onClick={() => setMenuOpen(false)}>
+                Editorial standards
+              </Link>
+              <Link href="/corrections" onClick={() => setMenuOpen(false)}>
+                Corrections
+              </Link>
+              <Link href="/contact" onClick={() => setMenuOpen(false)}>
+                Contact Newsroom
+              </Link>
+            </div>
+            <div>
+              <span>Follow &amp; Feeds</span>
+              <a href="https://x.com/globdotnews" target="_blank" rel="noopener noreferrer">
+                X (Twitter)
+              </a>
+              <a href="https://www.linkedin.com/company/globdot" target="_blank" rel="noopener noreferrer">
+                LinkedIn
+              </a>
+              <a href="https://bsky.app/profile/globdot.com" target="_blank" rel="noopener noreferrer">
+                Bluesky
+              </a>
+              <Link href="/rss.xml" onClick={() => setMenuOpen(false)}>
+                RSS News Feed
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

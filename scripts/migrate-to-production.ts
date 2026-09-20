@@ -230,11 +230,25 @@ async function main() {
       regionIds.push(Object.values(regionMap)[0]);
     }
 
-    // Map author
-    const authorId =
-      typeof art.author === 'object' && art.author?.id
-        ? art.author.id
-        : authorMap[art.authorSlug] || authorMap['globdot-administrator'] || Object.values(authorMap)[0];
+    if (art.slug && (art.slug.endsWith('-test') || art.slug.includes('-test-'))) {
+      console.log(`  ⏭ Skipping test article slug: ${art.slug}`);
+      skipped++;
+      continue;
+    }
+
+    // Map author across correspondents evenly
+    const authorSlugs = ['elena-rostova', 'tariq-mansoor', 'mei-lin-zhou', 'kojo-mensah'];
+    let authorId: any = null;
+    if (typeof art.author === 'object' && art.author?.slug && authorMap[art.author.slug]) {
+      authorId = authorMap[art.author.slug];
+    } else if (typeof art.author === 'number') {
+      const slugByIndex = authorSlugs[(art.author - 1) % authorSlugs.length];
+      authorId = authorMap[slugByIndex] || Object.values(authorMap)[0];
+    } else if (art.authorSlug && authorMap[art.authorSlug]) {
+      authorId = authorMap[art.authorSlug];
+    } else {
+      authorId = authorMap[authorSlugs[i % authorSlugs.length]] || Object.values(authorMap)[0];
+    }
 
     // Build payload conforming to editorial requirements
     let sources: any[] = [];
@@ -262,6 +276,11 @@ async function main() {
       reviewedAt: new Date().toISOString(),
     };
 
+    // Stagger dates realistically across September 2026
+    const baseTime = new Date('2026-09-20T18:00:00Z').getTime();
+    const staggeredOffset = (sourceArticles.length - i) * (8 * 3600 * 1000 + (i % 4) * 3600 * 1000);
+    const staggeredPublishDate = new Date(baseTime - staggeredOffset).toISOString();
+
     const articlePayload = {
       title: art.title,
       slug: art.slug,
@@ -276,7 +295,7 @@ async function main() {
       isBreaking: Boolean(art.isBreaking),
       isFeatured: Boolean(art.isFeatured),
       status: 'published',
-      publishedAt: art.publishedAt || new Date().toISOString(),
+      publishedAt: art.publishedAt && !art.publishedAt.startsWith('2026-09-14T12:00:00') ? art.publishedAt : staggeredPublishDate,
       readTime: art.readTime || 4,
       sourceLinks: sources,
       editorialReview: editorialReview,

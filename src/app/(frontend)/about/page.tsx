@@ -35,11 +35,19 @@ export default function AboutPage() {
         will be labelled prominently and kept separate from editorial coverage.
       </p>
 
+      <h2>Editorial Masthead &amp; Leadership</h2>
+      <p>
+        Globdot is led by an independent editorial board with dedicated regional bureaus across Geneva, Abu Dhabi,
+        Singapore, and Accra. Review our full newsroom roster, correspondent biographies, and verified publisher
+        credentials on our <Link href="/masthead">Editorial Masthead</Link>.
+      </p>
+
       <h2>Corrections and Contact</h2>
       <p>
         We correct substantive errors transparently and add a dated note to the affected article. Read our{' '}
-        <Link href="/editorial-standards">Editorial Standards</Link>, review the{' '}
-        <Link href="/corrections">Corrections Policy</Link>, or <Link href="/contact">contact us</Link> with a
+        <Link href="/editorial-standards">Editorial Standards</Link>, review our{' '}
+        <Link href="/corrections">Corrections Policy</Link>, explore the{' '}
+        <Link href="/masthead">Editorial Masthead</Link>, or <Link href="/contact">contact us</Link> with a
         question or correction request.
       </p>
     </InfoPage>

@@ -9,7 +9,18 @@ const escapeXml = (value = '') =>
     .replaceAll("'", '&apos;');
 
 export async function GET() {
-  const stories = await getPublishedArticles(50);
+  const rawStories = await getPublishedArticles(60);
+  const stories = rawStories
+    .filter(
+      (story) =>
+        story?.slug &&
+        !story.slug.endsWith('-test') &&
+        !story.slug.includes('-test-') &&
+        !story.title?.toLowerCase().includes('[test]') &&
+        !story.title?.toLowerCase().startsWith('test:')
+    )
+    .slice(0, 50);
+
   const items = stories
     .map(
       (story) => `
