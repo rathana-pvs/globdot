@@ -162,7 +162,7 @@ export function ArticleAuthorByline({ author }: ArticleAuthorBylineProps) {
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: '0.07em',
-                    color: '#6f42c1',
+                    color: 'var(--signal, #e02f2f)',
                     fontFamily: 'var(--font-mono)',
                     marginBottom: '2px',
                   }}

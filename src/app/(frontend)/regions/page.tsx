@@ -53,7 +53,7 @@ export default async function RegionsIndexPage() {
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6f42c1' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--signal)' }}>
                     Region
                   </span>
                   <span style={{ fontSize: '0.85rem', color: '#777' }}>

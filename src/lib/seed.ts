@@ -27,7 +27,7 @@ async function seed() {
 
   // 2. Seed Sections
   const defaultSections = [
-    { name: 'Politics', slug: 'politics', color: '#6f42c1', sortOrder: 10, description: 'Elections, diplomacy, governance, and public policy.' },
+    { name: 'Politics', slug: 'politics', color: '#e02f2f', sortOrder: 10, description: 'Elections, diplomacy, governance, and public policy.' },
     { name: 'War & Tension', slug: 'war-tension', color: '#c33a31', sortOrder: 20, description: 'Conflicts, geopolitical tensions, defense, and security.' },
     { name: 'Climate', slug: 'climate', color: '#16835f', sortOrder: 30, description: 'Environment, energy transition, and climate resilience.' },
     { name: 'Tech', slug: 'tech', color: '#2457ff', sortOrder: 40, description: 'Artificial intelligence, innovation, and digital policy.' },

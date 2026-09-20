@@ -2,6 +2,7 @@ import React, { Fragment, JSX } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getMediaUrl } from '@/lib/utils';
+import { QuoteHighlight } from './quote-highlight';
 
 type Node = {
   type: string;
@@ -114,12 +115,9 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
         );
       case 'quote':
         return (
-          <blockquote
-            key={nodeKey}
-            className="border-l-4 pl-4 py-2.5 my-6 text-lg leading-relaxed italic bg-[var(--surface)] border-[var(--signal)] text-[#222]"
-          >
+          <QuoteHighlight key={nodeKey} node={node} nodeKey={nodeKey}>
             {children}
-          </blockquote>
+          </QuoteHighlight>
         );
       case 'autolink':
       case 'link': {
