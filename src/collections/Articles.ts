@@ -1,4 +1,4 @@
-import { type CollectionConfig, APIError } from 'payload';
+import { type CollectionConfig } from 'payload';
 import { lexicalEditor, FixedToolbarFeature, HeadingFeature, HorizontalRuleFeature, UploadFeature } from '@payloadcms/richtext-lexical';
 import { slugify, cleanArticleSlug, calcReadTime } from '../lib/utils';
 import { revalidatePath, revalidateTag } from 'next/cache';
@@ -19,12 +19,12 @@ const revalidateArticlePages = (doc?: any, previousDoc?: any) => {
 };
 
 const validateSourceUrl = (value: string | null | undefined) => {
-  if (!value) return 'A source URL is required.';
+  if (!value || typeof value !== 'string' || !value.trim()) return true;
   try {
-    const url = new URL(value);
+    const url = new URL(value.trim());
     return ['http:', 'https:'].includes(url.protocol) || 'Use a public HTTP or HTTPS URL.';
   } catch {
-    return 'Enter a complete, valid source URL.';
+    return 'Enter a complete, valid source URL (e.g. https://example.com).';
   }
 };
 
@@ -32,7 +32,7 @@ export const Articles: CollectionConfig = {
   slug: 'articles',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'section', 'status', 'homepageSlot', 'publishedAt'],
+    defaultColumns: ['title', 'section', 'status', 'viewCount', 'homepageSlot', 'publishedAt'],
     description: 'Globdot global news articles, analysis, and feature stories.',
     preview: (doc) => {
       if (doc?.slug) {
@@ -83,30 +83,18 @@ export const Articles: CollectionConfig = {
           : data.coverImage;
 
         if (!data.og) data.og = {};
-        data.og.metaTitle = data.title?.slice(0, 60);
-        data.og.metaDescription = data.standfirst?.slice(0, 160);
-        if (coverImageId) data.og.ogImage = coverImageId;
+        if (data.title && !data.og.metaTitle) data.og.metaTitle = data.title.slice(0, 60);
+        if (data.standfirst && !data.og.metaDescription) data.og.metaDescription = data.standfirst.slice(0, 160);
+        if (coverImageId) {
+          data.og.ogImage = coverImageId;
+          if (!data.meta) data.meta = {};
+          data.meta.image = coverImageId;
+        }
 
-        if (data.status === 'published') {
-          const sourceLinks = Array.isArray(data.sourceLinks) ? data.sourceLinks : [];
-          const needsSources = data.storyType !== 'opinion' && data.storyType !== 'interview';
-          const review = data.editorialReview || {};
-
-          if (needsSources && !sourceLinks.some((source: any) => source?.name && source?.url)) {
-            throw new APIError('Published reporting must include at least one named source with a direct URL.', 400);
-          }
-          if (!review.factChecked || !review.sourcesChecked) {
-            throw new APIError('Complete the fact-check and source review before publishing.', 400);
-          }
-          if (coverImageId && !review.imageRightsChecked) {
-            throw new APIError('Confirm image usage rights before publishing an article with a cover image.', 400);
-          }
-          if (!review.reviewedBy) {
-            throw new APIError('Record the editor or reviewer responsible before publishing.', 400);
-          }
-          if (!review.reviewedAt) {
-            data.editorialReview = { ...review, reviewedAt: new Date().toISOString() };
-          }
+        if (Array.isArray(data.sourceLinks)) {
+          data.sourceLinks = data.sourceLinks.filter(
+            (source: any) => Boolean(source && (source.name?.trim() || source.url?.trim()))
+          );
         }
 
         if (data.status === 'published' && !data.publishedAt) {
@@ -256,10 +244,10 @@ export const Articles: CollectionConfig = {
       name: 'sourceLinks',
       label: 'Sources',
       type: 'array',
-      admin: { description: 'Direct links to primary documents or reporting used for this article.' },
+      admin: { description: 'Optional links to primary documents or reporting used for this article.' },
       fields: [
-        { name: 'name', type: 'text', required: true },
-        { name: 'url', type: 'text', required: true, validate: validateSourceUrl },
+        { name: 'name', type: 'text', required: false },
+        { name: 'url', type: 'text', required: false, validate: validateSourceUrl },
       ],
     },
     {
@@ -331,24 +319,20 @@ export const Articles: CollectionConfig = {
       admin: { position: 'sidebar', date: { pickerAppearance: 'dayAndTime' } },
     },
     { name: 'readTime', type: 'number', admin: { position: 'sidebar', description: 'Auto-calculated' } },
-    { name: 'viewCount', type: 'number', defaultValue: 0, admin: { position: 'sidebar' } },
+    {
+      name: 'viewCount',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'Total verified page reads (tracked automatically)',
+      },
+    },
     {
       name: 'correctionNote',
       type: 'textarea',
       admin: { description: 'Editorial correction or clarification note' },
-    },
-    {
-      name: 'editorialReview',
-      label: 'Publication checklist',
-      type: 'group',
-      admin: { description: 'Every item must be true and accurate before publication.' },
-      fields: [
-        { name: 'factChecked', type: 'checkbox', label: 'Facts and quotations verified' },
-        { name: 'sourcesChecked', type: 'checkbox', label: 'Source names and links verified' },
-        { name: 'imageRightsChecked', type: 'checkbox', label: 'Image ownership or licence verified' },
-        { name: 'reviewedBy', type: 'text', label: 'Reviewed by' },
-        { name: 'reviewedAt', type: 'date', label: 'Reviewed at' },
-      ],
     },
     {
       name: 'og',
@@ -357,7 +341,14 @@ export const Articles: CollectionConfig = {
       fields: [
         { name: 'metaTitle', type: 'text' },
         { name: 'metaDescription', type: 'textarea' },
-        { name: 'ogImage', type: 'upload', relationTo: 'media' },
+        {
+          name: 'ogImage',
+          type: 'upload',
+          relationTo: 'media',
+          admin: {
+            description: 'Auto-synced from Cover Image by default. Can be overridden.',
+          },
+        },
       ],
     },
   ],

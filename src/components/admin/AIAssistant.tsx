@@ -2,247 +2,205 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useFormFields, useForm, useDocumentInfo } from '@payloadcms/ui';
+import { useFormFields, useForm } from '@payloadcms/ui';
 
-interface AIResult {
+interface MetadataResult {
   title?: string;
+  slug?: string;
   standfirst?: string;
-  content?: string;
-  dateline?: string;
+  section?: number | string;
+  sectionName?: string;
+  regions?: (number | string)[];
+  regionNames?: string[];
   metaTitle?: string;
   metaDescription?: string;
-  section?: number;
-  sectionName?: string;
-  regions?: number[];
-  regionNames?: string[];
-  author?: number;
+  dateline?: string;
+  author?: number | string;
   authorName?: string;
-  coverImage?: number | string;
-  coverImageInfo?: {
-    id: number | string;
-    url: string;
-    credit?: string;
-    caption?: string;
-  };
-  scrapedImageUrl?: string;
-  storyType?: string;
-  sourceLinks?: Array<{ name: string; url: string }>;
-  sourceCount?: number;
-  sourceWarnings?: string[];
-  status?: 'published';
-  editorialReview?: {
-    factChecked: boolean;
-    sourcesChecked: boolean;
-    imageRightsChecked: boolean;
-    reviewedBy: string;
-    reviewedAt: string;
-  };
 }
 
-type Action = 'full' | 'content_only' | 'seo_only' | 'scrape_direct';
+interface CoverImageResult {
+  searchEntity?: string;
+  coverImage?: number | string;
+  imageUrl?: string;
+  credit?: string;
+  caption?: string;
+  alt?: string;
+}
+
+function extractTextFromLexical(node: any): string {
+  if (!node) return '';
+  if (typeof node === 'string') return node;
+  if (typeof node.text === 'string') return node.text;
+  if (Array.isArray(node.children)) {
+    return node.children.map(extractTextFromLexical).filter(Boolean).join(' ');
+  }
+  if (node.root) {
+    return extractTextFromLexical(node.root);
+  }
+  return '';
+}
 
 export const AIAssistant: React.FC = () => {
   const { dispatchFields, setModified } = useForm();
-  const docInfo = useDocumentInfo();
-  const docId = docInfo?.id;
+
+  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [pulse, setPulse] = useState(true);
+
+  // Form field watchers
   const titleValue = useFormFields(([fields]) => (fields?.title?.value as string) || '');
-  const slugValue = useFormFields(([fields]) => (fields?.slug?.value as string) || '');
-  const statusValue = useFormFields(([fields]) => (fields?.status?.value as string) || 'draft');
+  const contentRaw = useFormFields(([fields]) => fields?.content?.value);
   const standfirstValue = useFormFields(([fields]) => (fields?.standfirst?.value as string) || '');
   const reportingNotesValue = useFormFields(([fields]) => (fields?.reportingNotes?.value as string) || '');
-  const storyTypeValue = useFormFields(([fields]) => (fields?.storyType?.value as string) || 'news');
+  const coverImageValue = useFormFields(([fields]) => fields?.coverImage?.value);
+  const ogImageValue = useFormFields(([fields]) => fields?.['og.ogImage']?.value || (fields?.og?.value as any)?.ogImage);
 
-  const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [activeAction, setActiveAction] = useState<Action | null>(null);
-  const [result, setResult] = useState<AIResult | null>(null);
-  const [error, setError] = useState('');
-  const [applied, setApplied] = useState<Record<string, boolean>>({});
-  const [pulse, setPulse] = useState(true);
-  const [scrapeUrlValue, setScrapeUrlValue] = useState('');
-  const [mounted, setMounted] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
-  const [shortlinkCopied, setShortlinkCopied] = useState(false);
-  const [shortlink, setShortlink] = useState<string | null>(null);
-  const [shortlinkLoading, setShortlinkLoading] = useState(false);
+  // States for Button 1: Metadata & SEO
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [metaResult, setMetaResult] = useState<MetadataResult | null>(null);
+  const [metaError, setMetaError] = useState('');
+  const [appliedMeta, setAppliedMeta] = useState<Record<string, boolean>>({});
+
+  // States for Button 2: Cover Photo Search (Wikimedia Commons - no generated images)
+  const [coverLoading, setCoverLoading] = useState(false);
+  const [coverResult, setCoverResult] = useState<CoverImageResult | null>(null);
+  const [coverError, setCoverError] = useState('');
+  const [coverApplied, setCoverApplied] = useState(false);
+  const [photoKeyword, setPhotoKeyword] = useState('');
+
+  // Optional importer drawer
+  const [showImporter, setShowImporter] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importMsg, setImportMsg] = useState('');
 
   useEffect(() => {
     setMounted(true);
-    const t = setTimeout(() => setPulse(false), 5000);
+    const t = setTimeout(() => setPulse(false), 6000);
     return () => clearTimeout(t);
   }, []);
 
-  const callAI = async (action: Action) => {
-    setStatus('loading');
-    setActiveAction(action);
-    setError('');
-    setResult(null);
-    setApplied({});
+  // AUTOMATIC SYNC: When coverImage changes anywhere, sync to og.ogImage and meta.image
+  useEffect(() => {
+    if (!coverImageValue) return;
+
+    const coverId =
+      typeof coverImageValue === 'object' && coverImageValue !== null
+        ? (coverImageValue as any).id || coverImageValue
+        : coverImageValue;
+
+    if (!coverId) return;
+
+    const currentOgId =
+      typeof ogImageValue === 'object' && ogImageValue !== null
+        ? (ogImageValue as any).id || ogImageValue
+        : ogImageValue;
+
+    if (currentOgId !== coverId) {
+      dispatchFields({ type: 'UPDATE', path: 'og.ogImage', value: coverId, valid: true });
+      dispatchFields({ type: 'UPDATE', path: 'meta.image', value: coverId, valid: true });
+      if (typeof setModified === 'function') {
+        setModified(true);
+      }
+    }
+  }, [coverImageValue, ogImageValue, dispatchFields, setModified]);
+
+  // Extract clean text from content editor
+  const getArticleContentText = () => {
+    const lexicalText = extractTextFromLexical(contentRaw).trim();
+    if (lexicalText) return lexicalText;
+    if (reportingNotesValue?.trim()) return reportingNotesValue.trim();
+    if (standfirstValue?.trim()) return standfirstValue.trim();
+    return '';
+  };
+
+  // BUTTON 1: Generate Metadata, Taxonomy, SEO & OG
+  const handleGenerateMetadata = async () => {
+    const contentText = getArticleContentText();
+    const currentTitle = titleValue.trim();
+
+    if (!contentText && !currentTitle) {
+      setMetaError('Please write some content in the editor or enter a working title first.');
+      return;
+    }
+
+    setMetaLoading(true);
+    setMetaError('');
+    setMetaResult(null);
+    setAppliedMeta({});
 
     try {
       const res = await fetch('/api/ai/assist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action,
-          title: titleValue,
-          content: action === 'seo_only' ? standfirstValue : reportingNotesValue,
-          storyType: storyTypeValue,
-          url: action === 'scrape_direct' ? scrapeUrlValue : undefined,
+          action: 'metadata_only',
+          title: currentTitle,
+          content: contentText,
         }),
       });
+
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.success) {
-        const errorMsg =
-          json.error ||
-          json.errors?.[0]?.message ||
-          json.message ||
-          `Request failed with status ${res.status}`;
-        throw new Error(errorMsg);
+        throw new Error(json.error || `Request failed with status ${res.status}`);
       }
-      setResult(json.data);
-      setStatus('success');
+
+      setMetaResult(json.data);
     } catch (err: any) {
-      setError(err?.message || 'Failed to generate. Try again.');
-      setStatus('error');
+      setMetaError(err?.message || 'Failed to generate metadata. Please try again.');
+    } finally {
+      setMetaLoading(false);
     }
   };
 
-  const handleImport = async (e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent) => {
-    if (e) e.preventDefault();
-    if (!scrapeUrlValue) return;
-    await callAI('scrape_direct');
-  };
+  // BUTTON 2: Find Real Editorial Cover Photo (Wikimedia Commons Press Photos)
+  const handleFindCoverPhoto = async () => {
+    const contentText = getArticleContentText();
+    const currentTitle = titleValue.trim();
+    const keyword = photoKeyword.trim();
 
-  const handleCopyPublicLink = async () => {
-    if (!slugValue) return;
-    try {
-      const fullUrl = `${window.location.origin}/article/${slugValue}`;
-      await navigator.clipboard.writeText(fullUrl);
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2200);
-    } catch {
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2200);
-    }
-  };
-
-  const handleCreateShortlink = async () => {
-    if (!docId) {
-      alert('Please save the article before generating a campaign shortlink.');
+    if (!keyword && !currentTitle && !contentText) {
+      setCoverError('Enter a title, some content, or a search keyword to find photos.');
       return;
     }
-    setShortlinkLoading(true);
+
+    setCoverLoading(true);
+    setCoverError('');
+    setCoverResult(null);
+    setCoverApplied(false);
+
     try {
-      const res = await fetch('/api/share', {
+      const res = await fetch('/api/ai/assist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId: docId, label: 'Admin Quick Share' }),
+        body: JSON.stringify({
+          action: 'find_cover_image',
+          title: currentTitle,
+          content: contentText.slice(0, 400),
+          searchKeyword: keyword || undefined,
+        }),
       });
-      const data = await res.json();
-      if (data.success && data.link) {
-        const fullShortUrl = `${window.location.origin}${data.link.url}`;
-        setShortlink(fullShortUrl);
-        await navigator.clipboard.writeText(fullShortUrl);
-        setShortlinkCopied(true);
-        setTimeout(() => setShortlinkCopied(false), 2500);
-      } else {
-        alert(data.error || 'Could not generate shortlink.');
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || `No press photos found. Try a specific name or landmark.`);
       }
-    } catch (e: any) {
-      alert(e?.message || 'Failed to create shortlink.');
+
+      setCoverResult(json.data);
+      if (json.data?.searchEntity && !photoKeyword) {
+        setPhotoKeyword(json.data.searchEntity);
+      }
+    } catch (err: any) {
+      setCoverError(err?.message || 'Failed to search press photos.');
     } finally {
-      setShortlinkLoading(false);
+      setCoverLoading(false);
     }
   };
 
-  const convertTextToLexicalJson = (text: string) => {
-    if (!text) return null;
-    const blocks = text
-      .split(/\n\s*\n/)
-      .map((p) => p.trim())
-      .filter(Boolean);
-
-    const textNode = (value: string, format = 0) => ({
-      type: 'text', text: value, format, detail: 0, mode: 'normal', style: '', version: 1,
-    });
-
-    const children = blocks.map((block) => {
-      const heading = block.match(/^(#{2,3})\s+(.+)$/s);
-      if (heading) {
-        return {
-          type: 'heading', tag: heading[1].length === 2 ? 'h2' : 'h3', format: '', indent: 0,
-          version: 1, children: [textNode(heading[2].trim())], direction: 'ltr',
-        };
-      }
-
-      const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
-      if (lines.length > 0 && lines.every((line) => /^[-*]\s+/.test(line))) {
-        return {
-          type: 'list', listType: 'bullet', tag: 'ul', start: 1, format: '', indent: 0, version: 1,
-          children: lines.map((line) => ({
-            type: 'listitem', value: 1, format: '', indent: 0, version: 1,
-            children: [textNode(line.replace(/^[-*]\s+/, ''))], direction: 'ltr',
-          })),
-          direction: 'ltr',
-        };
-      }
-
-      if (block.startsWith('> ')) {
-        return {
-          type: 'quote', format: '', indent: 0, version: 1,
-          children: [textNode(block.replace(/^>\s+/, ''))], direction: 'ltr',
-        };
-      }
-
-      const qa = block.match(/^(Q|A):\s*(.+)$/s);
-      if (qa) {
-        return {
-          type: 'paragraph', format: '', indent: 0, version: 1,
-          children: [textNode(`${qa[1]}: `, 1), textNode(qa[2].trim())], direction: 'ltr',
-        };
-      }
-
-      return {
-        type: 'paragraph', format: '', indent: 0, version: 1,
-        children: [textNode(block)], direction: 'ltr',
-      };
-    });
-
-    return {
-      root: {
-        type: 'root',
-        format: '',
-        indent: 0,
-        version: 1,
-        children:
-          children.length > 0
-            ? children
-            : [
-                {
-                  type: 'paragraph',
-                  format: '',
-                  indent: 0,
-                  version: 1,
-                  children: [],
-                  direction: 'ltr',
-                },
-              ],
-        direction: 'ltr',
-      },
-    };
-  };
-
+  // Apply single field
   const applyField = (fieldName: string, value: any) => {
-    if (fieldName === 'standfirst' && typeof value === 'string' && result?.title) {
-      let clean = value;
-      const cleanT = result.title.trim().toLowerCase();
-      const prefix = cleanT.substring(0, Math.min(25, cleanT.length));
-      if (clean.trim().toLowerCase().startsWith(prefix)) {
-        clean = clean.trim().substring(result.title.length).replace(/^[\s:\-–—.,!]+/, '').trim();
-      }
-      dispatchFields({ type: 'UPDATE', path: 'standfirst', value: clean, valid: true });
-    } else if (fieldName === 'metaTitle') {
+    if (fieldName === 'metaTitle') {
       dispatchFields({ type: 'UPDATE', path: 'og.metaTitle', value, valid: true });
       dispatchFields({ type: 'UPDATE', path: 'meta.title', value, valid: true });
     } else if (fieldName === 'metaDescription') {
@@ -252,859 +210,711 @@ export const AIAssistant: React.FC = () => {
       dispatchFields({ type: 'UPDATE', path: 'coverImage', value, initialValue: value, valid: true });
       dispatchFields({ type: 'UPDATE', path: 'og.ogImage', value, initialValue: value, valid: true });
       dispatchFields({ type: 'UPDATE', path: 'meta.image', value, initialValue: value, valid: true });
-    } else if (fieldName === 'content') {
-      const lexicalValue =
-        typeof value === 'string' ? convertTextToLexicalJson(value) : JSON.parse(JSON.stringify(value));
-      dispatchFields({ type: 'UPDATE', path: 'content', value: lexicalValue, initialValue: lexicalValue, valid: true });
-    } else if (fieldName === 'section') {
-      dispatchFields({ type: 'UPDATE', path: 'section', value, initialValue: value, valid: true });
-    } else if (fieldName === 'regions') {
-      dispatchFields({ type: 'UPDATE', path: 'regions', value, initialValue: value, valid: true });
-    } else if (fieldName === 'author') {
-      dispatchFields({ type: 'UPDATE', path: 'author', value, initialValue: value, valid: true });
-    } else if (fieldName === 'editorialReview') {
-      dispatchFields({ type: 'UPDATE', path: 'editorialReview.factChecked', value: true, initialValue: true, valid: true });
-      dispatchFields({ type: 'UPDATE', path: 'editorialReview.sourcesChecked', value: true, initialValue: true, valid: true });
-      dispatchFields({ type: 'UPDATE', path: 'editorialReview.imageRightsChecked', value: true, initialValue: true, valid: true });
-      dispatchFields({ type: 'UPDATE', path: 'editorialReview.reviewedBy', value: value?.reviewedBy || 'Globdot Editorial Desk', initialValue: value?.reviewedBy || 'Globdot Editorial Desk', valid: true });
-      dispatchFields({ type: 'UPDATE', path: 'editorialReview.reviewedAt', value: value?.reviewedAt || new Date().toISOString(), initialValue: value?.reviewedAt || new Date().toISOString(), valid: true });
-      dispatchFields({ type: 'UPDATE', path: 'editorialReview', value, initialValue: value, valid: true });
-    } else if (fieldName === 'sourceLinks' && Array.isArray(value)) {
-      dispatchFields({ type: 'UPDATE', path: 'sourceLinks', value, initialValue: value, valid: true });
-      value.forEach((s, i) => {
-        dispatchFields({ type: 'UPDATE', path: `sourceLinks.${i}.name`, value: s.name, initialValue: s.name, valid: true });
-        dispatchFields({ type: 'UPDATE', path: `sourceLinks.${i}.url`, value: s.url, initialValue: s.url, valid: true });
-      });
     } else {
       dispatchFields({ type: 'UPDATE', path: fieldName, value, initialValue: value, valid: true });
     }
-    setApplied((prev) => ({ ...prev, [fieldName]: true }));
+    setAppliedMeta((prev) => ({ ...prev, [fieldName]: true }));
     if (typeof setModified === 'function') {
       setModified(true);
     }
   };
 
-  const applyAll = () => {
-    if (!result) return;
-    if (result.title) applyField('title', result.title);
-    if (result.coverImage) applyField('coverImage', result.coverImage);
-    if (result.standfirst) applyField('standfirst', result.standfirst);
-    if (result.content) applyField('content', result.content);
-    if (result.dateline) applyField('dateline', result.dateline);
-    if (result.section) applyField('section', result.section);
-    if (result.regions?.length) applyField('regions', result.regions);
-    if (result.author) applyField('author', result.author);
-    if (result.storyType) applyField('storyType', result.storyType);
-    if (result.sourceLinks?.length) applyField('sourceLinks', result.sourceLinks);
-    if (result.editorialReview) applyField('editorialReview', result.editorialReview);
-    if (result.status) applyField('status', result.status);
-    if (result.metaTitle) applyField('metaTitle', result.metaTitle);
-    if (result.metaDescription) applyField('metaDescription', result.metaDescription);
+  // 1-Click: Apply All Metadata
+  const applyAllMetadata = () => {
+    if (!metaResult) return;
+    if (metaResult.title) applyField('title', metaResult.title);
+    if (metaResult.slug) applyField('slug', metaResult.slug);
+    if (metaResult.standfirst) applyField('standfirst', metaResult.standfirst);
+    if (metaResult.section) applyField('section', metaResult.section);
+    if (metaResult.regions?.length) applyField('regions', metaResult.regions);
+    if (metaResult.metaTitle) applyField('metaTitle', metaResult.metaTitle);
+    if (metaResult.metaDescription) applyField('metaDescription', metaResult.metaDescription);
+    if (metaResult.dateline) applyField('dateline', metaResult.dateline);
     if (typeof setModified === 'function') {
       setModified(true);
     }
   };
 
-  const allApplied = Boolean(
-    result &&
-      (!result.title || applied['title']) &&
-      (!result.coverImage || applied['coverImage']) &&
-      (!result.standfirst || applied['standfirst']) &&
-      (!result.content || applied['content']) &&
-      (!result.section || applied['section']) &&
-      (!result.regions?.length || applied['regions']) &&
-      (!result.author || applied['author']) &&
-      (!result.storyType || applied['storyType']) &&
-      (!result.sourceLinks?.length || applied['sourceLinks']) &&
-      (!result.editorialReview || applied['editorialReview']) &&
-      (!result.status || applied['status']) &&
-      (!result.metaTitle || applied['metaTitle']) &&
-      (!result.metaDescription || applied['metaDescription'])
-  );
+  // Apply Cover Photo
+  const applyCoverPhoto = () => {
+    if (!coverResult?.coverImage) return;
+    applyField('coverImage', coverResult.coverImage);
+    setCoverApplied(true);
+  };
 
-  const buttons: { action: Action; icon: string; label: string; desc: string }[] = [
-    { action: 'full', icon: '✍️', label: 'Full Story', desc: 'Draft from verified reporting notes using the selected format' },
-    { action: 'content_only', icon: '📝', label: 'Content Only', desc: 'Draft the selected story type from reporting notes' },
-    { action: 'seo_only', icon: '🔍', label: 'SEO Only', desc: 'Generate meta title and description' },
-  ];
-
-  const isLoading = status === 'loading';
+  // Optional URL importer
+  const handleImportUrl = async () => {
+    if (!importUrl.trim()) return;
+    setImportLoading(true);
+    setImportMsg('');
+    try {
+      const res = await fetch('/api/ai/assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'scrape_direct',
+          url: importUrl.trim(),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to import story');
+      }
+      const data = json.data;
+      if (data.title) applyField('title', data.title);
+      if (data.standfirst) applyField('standfirst', data.standfirst);
+      if (data.section) applyField('section', data.section);
+      if (data.regions) applyField('regions', data.regions);
+      if (data.coverImage) applyField('coverImage', data.coverImage);
+      if (data.metaTitle) applyField('metaTitle', data.metaTitle);
+      if (data.metaDescription) applyField('metaDescription', data.metaDescription);
+      setImportMsg('✓ Story imported & applied successfully!');
+    } catch (e: any) {
+      setImportMsg(`✕ ${e?.message || 'Import error'}`);
+    } finally {
+      setImportLoading(false);
+    }
+  };
 
   if (!mounted) return null;
 
   return createPortal(
     <>
       <style>{`
-        @keyframes ai-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(36, 87, 255, 0.6); }
-          50% { box-shadow: 0 0 0 10px rgba(36, 87, 255, 0); }
-        }
-        @keyframes ai-spin {
-          to { transform: rotate(360deg); }
-        }
-        @keyframes ai-slide-in {
-          from { opacity: 0; transform: translateX(20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes ai-fade-in {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .ai-fab {
-          position: fixed;
-          bottom: 32px;
-          right: 32px;
-          z-index: 999999;
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #2457ff 0%, #16a178 100%);
-          border: none;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 22px;
-          color: white;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-          box-shadow: 0 4px 20px rgba(36, 87, 255, 0.5);
-        }
-        .ai-fab:hover {
-          transform: scale(1.1);
-          box-shadow: 0 6px 28px rgba(36, 87, 255, 0.7);
-        }
-        .ai-fab.pulse {
-          animation: ai-pulse 1.8s ease-in-out infinite;
-        }
-        .ai-panel {
-          position: fixed;
-          bottom: 100px;
-          right: 32px;
-          z-index: 999998;
-          width: 350px;
-          max-height: 80vh;
-          overflow-y: auto;
-          border-radius: 16px;
-          background: var(--theme-elevation-100, #1c2128);
-          border: 1px solid rgba(36, 87, 255, 0.3);
-          box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
-          animation: ai-slide-in 0.25s ease forwards;
-        }
-        .ai-panel::-webkit-scrollbar { width: 4px; }
-        .ai-panel::-webkit-scrollbar-thumb { background: rgba(36, 87, 255, 0.4); border-radius: 4px; }
-        .ai-backdrop {
-          position: fixed;
-          inset: 0;
-          z-index: 999997;
-        }
-        .import-btn {
-          width: 100%;
-          padding: 10px 14px;
-          border: none;
-          border-radius: 6px;
-          background: #2457ff;
-          color: #fff;
-          font-size: 11px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.15s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        }
-        .import-btn:hover:not(:disabled) {
-          background: #1842c9;
-        }
-        .import-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        .ai-action-btn {
-          width: 100%;
-          padding: 11px 14px;
-          border: 1px solid var(--theme-border-color, #30363d);
-          border-radius: 8px;
-          background: var(--theme-elevation-150, #21262d);
-          color: var(--theme-text-color, #f5f0e8);
-          cursor: pointer;
-          text-align: left;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          transition: all 0.15s ease;
-          font-family: inherit;
-        }
-        .ai-action-btn:hover:not(:disabled) {
-          border-color: #2457ff;
-          background: rgba(36, 87, 255, 0.1);
-          transform: translateY(-1px);
-        }
-        .ai-action-btn:disabled {
-          opacity: 0.45;
-          cursor: not-allowed;
-        }
-        .ai-apply-btn {
-          width: 100%;
-          padding: 7px 12px;
-          border: none;
-          border-radius: 6px;
-          background: #2457ff;
-          color: #fff;
-          font-size: 11px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.15s ease;
-          font-family: inherit;
-        }
-        .ai-apply-btn:hover:not(:disabled) { background: #1842c9; }
-        .ai-apply-btn:disabled { background: #16a178; cursor: default; }
-        .ai-apply-all-btn {
-          width: 100%;
-          padding: 10px 14px;
-          border: none;
-          border-radius: 8px;
-          background: linear-gradient(135deg, #16a178 0%, #059669 100%);
-          color: #fff;
-          font-size: 12px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.15s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          box-shadow: 0 4px 12px rgba(22, 161, 120, 0.3);
-          font-family: inherit;
-        }
-        .ai-apply-all-btn:hover:not(:disabled) {
-          background: linear-gradient(135deg, #059669 0%, #047857 100%);
-          transform: translateY(-1px);
-        }
-        .ai-apply-all-btn:disabled {
-          background: rgba(46, 204, 113, 0.2);
-          color: #2ecc71;
-          border: 1px solid rgba(46, 204, 113, 0.4);
-          cursor: default;
-          transform: none;
-        }
-        .ai-result { animation: ai-fade-in 0.3s ease forwards; }
-        .ai-tag {
-          display: inline-block;
-          padding: 3px 10px;
-          border-radius: 100px;
-          background: rgba(36, 87, 255, 0.15);
-          border: 1px solid rgba(36, 87, 255, 0.3);
-          font-size: 10px;
-          color: #7094ff;
-        }
-      `}</style>
+            @keyframes ai-pulse {
+              0%, 100% { box-shadow: 0 0 0 0 rgba(31, 111, 235, 0.6); }
+              50% { box-shadow: 0 0 0 10px rgba(31, 111, 235, 0); }
+            }
+            @keyframes ai-spin {
+              to { transform: rotate(360deg); }
+            }
+            @keyframes ai-slide-in {
+              from { opacity: 0; transform: translateY(14px) scale(0.97); }
+              to { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            .ai-fab {
+              position: fixed;
+              bottom: 28px;
+              right: 28px;
+              z-index: 999999;
+              width: 54px;
+              height: 54px;
+              border-radius: 50%;
+              background: linear-gradient(135deg, #1f6feb 0%, #238636 100%);
+              border: 2px solid rgba(255, 255, 255, 0.25);
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 22px;
+              color: white;
+              transition: transform 0.2s ease, box-shadow 0.2s ease;
+              box-shadow: 0 6px 24px rgba(31, 111, 235, 0.45);
+            }
+            .ai-fab:hover {
+              transform: scale(1.08);
+              box-shadow: 0 8px 30px rgba(31, 111, 235, 0.65);
+            }
+            .ai-fab.pulse {
+              animation: ai-pulse 2s ease-in-out infinite;
+            }
+            .ai-panel {
+              position: fixed;
+              bottom: 94px;
+              right: 28px;
+              z-index: 999998;
+              width: 380px;
+              max-width: calc(100vw - 36px);
+              max-height: 82vh;
+              overflow-y: auto;
+              border-radius: 14px;
+              background: var(--theme-elevation-100, #161b22);
+              border: 1px solid var(--theme-border-color, #30363d);
+              box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
+              animation: ai-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+              font-family: inherit;
+            }
+            .ai-panel::-webkit-scrollbar { width: 5px; }
+            .ai-panel::-webkit-scrollbar-thumb { background: rgba(56, 139, 253, 0.4); border-radius: 4px; }
+            .ai-backdrop {
+              position: fixed;
+              inset: 0;
+              z-index: 999997;
+              background: rgba(0, 0, 0, 0.25);
+              backdrop-filter: blur(1px);
+            }
+          `}</style>
 
-      {open && <div className="ai-backdrop" onClick={() => setOpen(false)} />}
+          {open && <div className="ai-backdrop" onClick={() => setOpen(false)} />}
 
-      <button
-        className={`ai-fab${pulse && !open ? ' pulse' : ''}`}
-        onClick={() => setOpen((o) => !o)}
-        title="Globdot AI Newsroom Assistant"
-        type="button"
-      >
-        {open ? '✕' : '✨'}
-      </button>
-
-      {open && (
-        <div className="ai-panel">
-          <div
-            style={{
-              padding: '14px',
-              borderBottom: '1px solid var(--theme-border-color, #30363d)',
-              background: 'var(--theme-elevation-150, #21262d)',
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
+          <button
+            className={`ai-fab${pulse && !open ? ' pulse' : ''}`}
+            onClick={() => setOpen((prev) => !prev)}
+            title="AI Editorial Assistant"
+            type="button"
           >
-            <div>
+            {open ? '✕' : '✨'}
+          </button>
+
+          {open && (
+            <div className="ai-panel">
+              {/* Panel Header */}
               <div
                 style={{
-                  fontWeight: 800,
-                  fontSize: 13,
-                  color: 'var(--theme-text-color, #f5f0e8)',
+                  padding: '12px 14px',
+                  borderBottom: '1px solid var(--theme-border-color, #30363d)',
+                  background: 'var(--theme-elevation-150, #21262d)',
+                  borderTopLeftRadius: '14px',
+                  borderTopRightRadius: '14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
+                  justifyContent: 'space-between',
                 }}
               >
-                <span>✨</span> Globdot AI Assistant
-              </div>
-              <div style={{ fontSize: 9, color: 'var(--theme-text-muted, #8b949e)', marginTop: 2 }}>
-                Multi-source importer & Google Gemini AI Writer
-              </div>
-            </div>
-            <button
-              onClick={() => setOpen(false)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--theme-text-muted, #8b949e)',
-                cursor: 'pointer',
-                fontSize: 16,
-                padding: 4,
-              }}
-            >
-              ✕
-            </button>
-          </div>
-
-          <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Shareable Story Link Section */}
-            {slugValue && (
-              <div
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid var(--theme-border-color, #30363d)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span
+                <div>
+                  <div
                     style={{
-                      fontWeight: 700,
-                      fontSize: 11,
-                      color: 'var(--theme-text-muted, #8b949e)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    🔗 Shareable Story Link
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                      background: statusValue === 'published' ? 'rgba(46,160,67,0.15)' : 'rgba(210,153,34,0.15)',
-                      color: statusValue === 'published' ? '#3fb950' : '#d29922',
-                      border: `1px solid ${statusValue === 'published' ? 'rgba(46,160,67,0.3)' : 'rgba(210,153,34,0.3)'}`,
-                    }}
-                  >
-                    {statusValue === 'published' ? '🟢 Published' : '🟡 Draft'}
-                  </span>
-                </div>
-
-                <div
-                  style={{
-                    padding: '6px 8px',
-                    borderRadius: 4,
-                    background: 'rgba(0,0,0,0.25)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    color: '#e6edf3',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                  title={`/article/${slugValue}`}
-                >
-                  /article/{slugValue}
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                  <button
-                    type="button"
-                    onClick={handleCopyPublicLink}
-                    style={{
-                      padding: '6px 8px',
-                      borderRadius: 6,
-                      background: linkCopied ? '#238636' : 'var(--theme-elevation-200, #21262d)',
-                      color: '#fff',
-                      border: '1px solid var(--theme-border-color, #30363d)',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      cursor: 'pointer',
+                      fontWeight: 800,
+                      fontSize: '13px',
+                      color: 'var(--theme-text-color, #f0f6fc)',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 4,
+                      gap: '6px',
                     }}
                   >
-                    {linkCopied ? '✓ Copied' : '📋 Copy Link'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => window.open(`/article/${slugValue}`, '_blank', 'noopener,noreferrer')}
-                    style={{
-                      padding: '6px 8px',
-                      borderRadius: 6,
-                      background: 'var(--theme-elevation-200, #21262d)',
-                      color: '#fff',
-                      border: '1px solid var(--theme-border-color, #30363d)',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 4,
-                    }}
-                  >
-                    ↗ Open Story
-                  </button>
+                    <span>✨</span> AI Editorial Assistant
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--theme-text-muted, #8b949e)', marginTop: '2px' }}>
+                    Manual Editor Workflow • Real Press Photos
+                  </div>
                 </div>
-
-                {docId ? (
-                  <button
-                    type="button"
-                    onClick={handleCreateShortlink}
-                    disabled={shortlinkLoading}
-                    style={{
-                      padding: '5px 8px',
-                      borderRadius: 6,
-                      background: 'rgba(56, 139, 253, 0.08)',
-                      color: '#58a6ff',
-                      border: '1px dashed rgba(56, 139, 253, 0.3)',
-                      fontSize: 10,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                    }}
-                  >
-                    {shortlinkLoading
-                      ? 'Creating shortlink...'
-                      : shortlinkCopied
-                      ? `✓ Copied Shortlink: ${shortlink}`
-                      : '⚡ Create Tracked Shortlink (/s/...)'}
-                  </button>
-                ) : null}
-              </div>
-            )}
-
-            {/* Section 1: Link Importer */}
-            <div>
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: 11,
-                  color: 'var(--theme-text-muted, #8b949e)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  marginBottom: 6,
-                }}
-              >
-                🔎 Multi-source Story & Headline Importer
-              </div>
-              <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--theme-text-muted, #8b949e)', lineHeight: 1.4 }}>
-                Paste a news report URL or enter any headline/topic. The assistant verifies coverage across multiple outlets, corroborates facts, and auto-attaches a legal cover image.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <input
-                  type="text"
-                  placeholder="Paste news URL or headline (e.g. Supreme Court rejects Trump mail ballot order)..."
-                  value={scrapeUrlValue}
-                  onChange={(e) => setScrapeUrlValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleImport(e);
-                    }
-                  }}
-                  disabled={isLoading}
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    borderRadius: 6,
-                    border: '1px solid var(--theme-border-color, #30363d)',
-                    background: 'var(--theme-elevation-200, #1c2128)',
-                    color: 'var(--theme-text-color, #f5f0e8)',
-                    fontSize: 11,
-                    fontFamily: 'inherit',
-                  }}
-                />
                 <button
                   type="button"
-                  className="import-btn"
-                  onClick={handleImport}
-                  disabled={isLoading || !scrapeUrlValue}
+                  onClick={() => setOpen(false)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--theme-text-muted, #8b949e)',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    padding: '4px',
+                    lineHeight: 1,
+                  }}
                 >
-                  {isLoading && activeAction === 'scrape_direct' ? (
-                    <>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: 12,
-                          height: 12,
-                          border: '2px solid rgba(255,255,255,0.2)',
-                          borderTopColor: '#fff',
-                          borderRadius: '50%',
-                          animation: 'ai-spin 0.7s linear infinite',
-                        }}
-                      />
-                      Finding sources...
-                    </>
-                  ) : (
-                    'Find Sources & Draft'
-                  )}
+                  ✕
                 </button>
               </div>
-            </div>
 
-            <div style={{ height: '1px', background: 'var(--theme-border-color, #30363d)', margin: '4px 0' }} />
-
-            {/* Section 2: AI Writing */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: 11,
-                  color: 'var(--theme-text-muted, #8b949e)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                ✍️ AI Editorial Writing
-              </div>
-
-              {!titleValue && (
-                <div
+              {/* Panel Content */}
+              <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <p
                   style={{
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: 'rgba(255,193,7,0.08)',
-                    border: '1px solid rgba(255,193,7,0.25)',
+                    margin: 0,
                     fontSize: '11px',
-                    color: '#f0b429',
+                    color: 'var(--theme-text-muted, #8b949e)',
+                    lineHeight: 1.4,
                   }}
                 >
-                  ⚠️ Enter a headline first to generate.
-                </div>
-              )}
+                  Write your story manually. Click below to generate metadata or attach real press photography.
+                </p>
 
-              {buttons.map(({ action, icon, label, desc }) => (
-                <button
-                  key={action}
-                  type="button"
-                  className="ai-action-btn"
-                  disabled={isLoading || !titleValue}
-                  onClick={() => callAI(action)}
-                >
-                  <span style={{ fontSize: 18, flexShrink: 0 }}>
-                    {activeAction === action && isLoading ? (
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: 16,
-                          height: 16,
-                          border: '2px solid rgba(255,255,255,0.2)',
-                          borderTopColor: '#fff',
-                          borderRadius: '50%',
-                          animation: 'ai-spin 0.7s linear infinite',
-                        }}
-                      />
-                    ) : (
-                      icon
-                    )}
-                  </span>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 12 }}>{label}</div>
-                    <div style={{ fontSize: 10, color: 'var(--theme-text-muted, #8b949e)', marginTop: 1 }}>
-                      {activeAction === action && isLoading ? 'Writing...' : desc}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {status === 'error' && (
-              <div
-                className="ai-result"
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  background: 'rgba(231,76,60,0.08)',
-                  border: '1px solid rgba(231,76,60,0.3)',
-                  fontSize: 11,
-                  color: '#e74c3c',
-                  lineHeight: 1.4,
-                }}
-              >
-                ✕ {error}
-              </div>
-            )}
-
-            {status === 'success' && result && (
-              <div className="ai-result" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                {/* BUTTON 1: GENERATE METADATA & SEO */}
                 <div
                   style={{
+                    padding: '10px',
+                    borderRadius: '8px',
+                    background: 'var(--theme-elevation-150, #21262d)',
+                    border: '1px solid var(--theme-border-color, #30363d)',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '4px 0',
+                    flexDirection: 'column',
+                    gap: '8px',
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: '#16a178',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                    }}
-                  >
-                    ✅ Generated — Ready to apply
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: '#58a6ff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      ⚡ 1. Metadata & SEO
+                    </span>
+                    <span style={{ fontSize: '10px', color: 'var(--theme-text-muted, #8b949e)' }}>
+                      Title • Slug • SEO • OG
+                    </span>
                   </div>
-                </div>
 
-                <button
-                  type="button"
-                  className="ai-apply-all-btn"
-                  onClick={applyAll}
-                  disabled={allApplied}
-                >
-                  {allApplied ? '✓ All Fields Applied' : '🚀 Apply All Fields (1-Click)'}
-                </button>
-
-                <div style={{ height: '1px', background: 'var(--theme-border-color, #30363d)', margin: '2px 0' }} />
-
-                {result.title && (
-                  <ResultCard
-                    label="Headline"
-                    value={result.title}
-                    applied={!!applied['title']}
-                    onApply={() => applyField('title', result.title)}
-                  />
-                )}
-                {result.coverImage && (
-                  <ResultCard
-                    label="Cover Image"
-                    value={
-                      result.coverImageInfo?.credit
-                        ? `${result.coverImageInfo.credit} (Media ID: ${result.coverImage})`
-                        : `Imported to media library (ID: ${result.coverImage})`
-                    }
-                    applied={!!applied['coverImage']}
-                    onApply={() => applyField('coverImage', result.coverImage)}
-                    imageUrl={result.coverImageInfo?.url || result.scrapedImageUrl}
-                  />
-                )}
-                {result.standfirst && (
-                  <ResultCard
-                    label="Standfirst"
-                    value={result.standfirst}
-                    applied={!!applied['standfirst']}
-                    onApply={() => applyField('standfirst', result.standfirst)}
-                  />
-                )}
-                {result.dateline && (
-                  <ResultCard
-                    label="Dateline"
-                    value={result.dateline}
-                    applied={!!applied['dateline']}
-                    onApply={() => applyField('dateline', result.dateline)}
-                  />
-                )}
-                {result.content && (
-                  <ResultCard
-                    label="Article Body"
-                    value={
-                      typeof result.content === 'string'
-                        ? result.content.length > 160
-                          ? result.content.substring(0, 160) + '...'
-                          : result.content
-                        : 'Formatted rich text content ready.'
-                    }
-                    applied={!!applied['content']}
-                    onApply={() => applyField('content', result.content)}
-                  />
-                )}
-                {result.storyType && (
-                  <ResultCard
-                    label="Story Format"
-                    value={result.storyType}
-                    applied={!!applied['storyType']}
-                    onApply={() => applyField('storyType', result.storyType)}
-                  />
-                )}
-                {result.status && (
-                  <ResultCard
-                    label="Publication Status"
-                    value="Published"
-                    applied={!!applied['status']}
-                    onApply={() => applyField('status', result.status)}
-                  />
-                )}
-                {result.sectionName && (
-                  <ResultCard
-                    label="Category (Section)"
-                    value={result.sectionName}
-                    applied={!!applied['section']}
-                    onApply={() => applyField('section', result.section)}
-                  />
-                )}
-                {result.regionNames && result.regionNames.length > 0 && (
-                  <ResultCard
-                    label="Geographic Region"
-                    value={result.regionNames.join(', ')}
-                    applied={!!applied['regions']}
-                    onApply={() => applyField('regions', result.regions)}
-                  />
-                )}
-                {result.authorName && (
-                  <ResultCard
-                    label="Author"
-                    value={result.authorName}
-                    applied={!!applied['author']}
-                    onApply={() => applyField('author', result.author)}
-                  />
-                )}
-                {result.editorialReview && (
-                  <ResultCard
-                    label="Fact-Check & Review Checklist"
-                    value="✓ Facts & Quotes Verified • ✓ Sources Checked • ✓ Rights Confirmed"
-                    applied={!!applied['editorialReview']}
-                    onApply={() => applyField('editorialReview', result.editorialReview)}
-                  />
-                )}
-                {result.sourceLinks && result.sourceLinks.length > 0 && (
-                  <ResultCard
-                    label={`Sources (${result.sourceCount || result.sourceLinks.length})`}
-                    value={result.sourceLinks.map((source) => `${source.name}: ${source.url}`).join('\n')}
-                    applied={!!applied['sourceLinks']}
-                    onApply={() => applyField('sourceLinks', result.sourceLinks)}
-                  />
-                )}
-                {result.sourceWarnings && result.sourceWarnings.length > 0 && (
-                  <div
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: 8,
-                      background: 'rgba(240,180,41,0.08)',
-                      border: '1px solid rgba(240,180,41,0.3)',
-                      color: '#f0b429',
-                      fontSize: 10,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {result.sourceWarnings.map((warning) => <div key={warning}>⚠ {warning}</div>)}
-                  </div>
-                )}
-                {result.metaTitle && (
-                  <ResultCard
-                    label="SEO Meta Title"
-                    value={result.metaTitle}
-                    applied={!!applied['metaTitle']}
-                    onApply={() => applyField('metaTitle', result.metaTitle)}
-                  />
-                )}
-                {result.metaDescription && (
-                  <ResultCard
-                    label="SEO Meta Description"
-                    value={result.metaDescription}
-                    applied={!!applied['metaDescription']}
-                    onApply={() => applyField('metaDescription', result.metaDescription)}
-                  />
-                )}
-
-                {activeAction !== 'scrape_direct' && (
                   <button
                     type="button"
-                    onClick={() => activeAction && callAI(activeAction)}
+                    onClick={handleGenerateMetadata}
+                    disabled={metaLoading}
                     style={{
                       width: '100%',
-                      padding: '8px',
-                      border: '1px solid var(--theme-border-color, #30363d)',
-                      borderRadius: 6,
-                      background: 'transparent',
-                      color: 'var(--theme-text-muted, #8b949e)',
-                      cursor: 'pointer',
-                      fontSize: 11,
-                      fontFamily: 'inherit',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: metaLoading
+                        ? '#1f3557'
+                        : 'linear-gradient(135deg, #1f6feb 0%, #238636 100%)',
+                      color: '#ffffff',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: metaLoading ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      transition: 'opacity 0.15s ease',
                     }}
                   >
-                    🔄 Regenerate
+                    {metaLoading ? (
+                      <>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: '12px',
+                            height: '12px',
+                            border: '2px solid rgba(255,255,255,0.3)',
+                            borderTopColor: '#ffffff',
+                            borderRadius: '50%',
+                            animation: 'ai-spin 0.7s linear infinite',
+                          }}
+                        />
+                        Analyzing Content...
+                      </>
+                    ) : (
+                      'Generate Metadata & SEO'
+                    )}
                   </button>
-                )}
+
+                  {metaError && (
+                    <div
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '5px',
+                        background: 'rgba(248, 81, 73, 0.12)',
+                        border: '1px solid rgba(248, 81, 73, 0.3)',
+                        color: '#f85149',
+                        fontSize: '10px',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      ✕ {metaError}
+                    </div>
+                  )}
+
+                  {metaResult && (
+                    <div
+                      style={{
+                        marginTop: '4px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        background: 'rgba(0,0,0,0.2)',
+                        border: '1px solid rgba(56, 139, 253, 0.25)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#3fb950' }}>
+                          ✓ Generated Suggestions
+                        </span>
+                        <button
+                          type="button"
+                          onClick={applyAllMetadata}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            border: 'none',
+                            background: '#238636',
+                            color: '#fff',
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          🚀 Apply All
+                        </button>
+                      </div>
+
+                      {metaResult.title && (
+                        <FieldChip
+                          label="Headline"
+                          value={metaResult.title}
+                          applied={!!appliedMeta['title']}
+                          onApply={() => applyField('title', metaResult.title)}
+                        />
+                      )}
+                      {metaResult.slug && (
+                        <FieldChip
+                          label="Slug"
+                          value={metaResult.slug}
+                          applied={!!appliedMeta['slug']}
+                          onApply={() => applyField('slug', metaResult.slug)}
+                        />
+                      )}
+                      {metaResult.standfirst && (
+                        <FieldChip
+                          label="Excerpt"
+                          value={metaResult.standfirst}
+                          applied={!!appliedMeta['standfirst']}
+                          onApply={() => applyField('standfirst', metaResult.standfirst)}
+                        />
+                      )}
+                      {metaResult.sectionName && (
+                        <FieldChip
+                          label="Category"
+                          value={metaResult.sectionName}
+                          applied={!!appliedMeta['section']}
+                          onApply={() => applyField('section', metaResult.section)}
+                        />
+                      )}
+                      {metaResult.regionNames && metaResult.regionNames.length > 0 && (
+                        <FieldChip
+                          label="Region"
+                          value={metaResult.regionNames.join(', ')}
+                          applied={!!appliedMeta['regions']}
+                          onApply={() => applyField('regions', metaResult.regions)}
+                        />
+                      )}
+                      {metaResult.metaTitle && (
+                        <FieldChip
+                          label="SEO Title"
+                          value={metaResult.metaTitle}
+                          applied={!!appliedMeta['metaTitle']}
+                          onApply={() => applyField('metaTitle', metaResult.metaTitle)}
+                        />
+                      )}
+                      {metaResult.metaDescription && (
+                        <FieldChip
+                          label="SEO Description"
+                          value={metaResult.metaDescription}
+                          applied={!!appliedMeta['metaDescription']}
+                          onApply={() => applyField('metaDescription', metaResult.metaDescription)}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* BUTTON 2: FIND COVER PHOTO (WIKIMEDIA COMMONS - NO GENERATED IMAGES) */}
+                <div
+                  style={{
+                    padding: '10px',
+                    borderRadius: '8px',
+                    background: 'var(--theme-elevation-150, #21262d)',
+                    border: '1px solid var(--theme-border-color, #30363d)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: '#3fb950',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      🖼️ 2. Get Cover Photo
+                    </span>
+                    <span style={{ fontSize: '10px', color: 'var(--theme-text-muted, #8b949e)' }}>
+                      Real Press Photo (Wikimedia)
+                    </span>
+                  </div>
+
+                  {/* Search Keyword override input */}
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input
+                      type="text"
+                      placeholder={
+                        photoKeyword
+                          ? `Subject: ${photoKeyword}`
+                          : 'Search subject (e.g. person, landmark, company)'
+                      }
+                      value={photoKeyword}
+                      onChange={(e) => setPhotoKeyword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleFindCoverPhoto();
+                        }
+                      }}
+                      disabled={coverLoading}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        borderRadius: '5px',
+                        border: '1px solid var(--theme-border-color, #30363d)',
+                        background: 'var(--theme-elevation-200, #0d1117)',
+                        color: 'var(--theme-text-color, #f0f6fc)',
+                        fontSize: '11px',
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleFindCoverPhoto}
+                    disabled={coverLoading}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: coverLoading ? '#1a4731' : '#238636',
+                      color: '#ffffff',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: coverLoading ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      transition: 'opacity 0.15s ease',
+                    }}
+                  >
+                    {coverLoading ? (
+                      <>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: '12px',
+                            height: '12px',
+                            border: '2px solid rgba(255,255,255,0.3)',
+                            borderTopColor: '#ffffff',
+                            borderRadius: '50%',
+                            animation: 'ai-spin 0.7s linear infinite',
+                          }}
+                        />
+                        Searching Press Photos...
+                      </>
+                    ) : (
+                      'Find Real Cover Photo'
+                    )}
+                  </button>
+
+                  {coverError && (
+                    <div
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '5px',
+                        background: 'rgba(248, 81, 73, 0.12)',
+                        border: '1px solid rgba(248, 81, 73, 0.3)',
+                        color: '#f85149',
+                        fontSize: '10px',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      ✕ {coverError}
+                    </div>
+                  )}
+
+                  {coverResult && (
+                    <div
+                      style={{
+                        marginTop: '4px',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        background: 'rgba(0,0,0,0.2)',
+                        border: '1px solid rgba(46, 160, 67, 0.3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                      }}
+                    >
+                      {coverResult.imageUrl && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={coverResult.imageUrl}
+                          alt={coverResult.alt || 'Cover photo preview'}
+                          style={{
+                            width: '100%',
+                            maxHeight: '130px',
+                            objectFit: 'cover',
+                            borderRadius: '5px',
+                            border: '1px solid var(--theme-border-color, #30363d)',
+                          }}
+                        />
+                      )}
+                      <div style={{ fontSize: '10px', color: 'var(--theme-text-muted, #8b949e)', lineHeight: 1.3 }}>
+                        {coverResult.credit || 'Wikimedia Commons Press Photo'}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={applyCoverPhoto}
+                        disabled={coverApplied}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '5px',
+                          border: 'none',
+                          background: coverApplied ? '#2ea043' : '#1f6feb',
+                          color: '#fff',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: coverApplied ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        {coverApplied ? '✓ Attached to Cover & OG Image' : '🖼️ Attach to Cover & OG Image'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Optional URL Scraper Collapsible */}
+                <div style={{ borderTop: '1px solid var(--theme-border-color, #30363d)', paddingTop: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowImporter((prev) => !prev)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--theme-text-muted, #8b949e)',
+                      fontSize: '10px',
+                      cursor: 'pointer',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span>{showImporter ? '▾' : '▸'}</span>
+                    <span>Optional: Import from external news URL</span>
+                  </button>
+
+                  {showImporter && (
+                    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <input
+                        type="text"
+                        placeholder="Paste article URL to import..."
+                        value={importUrl}
+                        onChange={(e) => setImportUrl(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '6px 8px',
+                          borderRadius: '5px',
+                          border: '1px solid var(--theme-border-color, #30363d)',
+                          background: 'var(--theme-elevation-200, #0d1117)',
+                          color: 'var(--theme-text-color, #f0f6fc)',
+                          fontSize: '11px',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleImportUrl}
+                        disabled={importLoading || !importUrl.trim()}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '5px',
+                          border: 'none',
+                          background: '#21262d',
+                          color: '#c9d1d9',
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {importLoading ? 'Importing...' : 'Fetch & Populate'}
+                      </button>
+                      {importMsg && (
+                        <div
+                          style={{
+                            fontSize: '10px',
+                            color: importMsg.startsWith('✓') ? '#3fb950' : '#f85149',
+                          }}
+                        >
+                          {importMsg}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
-    </>,
-    document.body
-  );
+            </div>
+          )}
+        </>,
+        document.body,
+      );
 };
 
-function ResultCard({
+function FieldChip({
   label,
   value,
   applied,
   onApply,
-  imageUrl,
 }: {
   label: string;
   value: string;
   applied: boolean;
   onApply: () => void;
-  imageUrl?: string;
 }) {
   return (
     <div
       style={{
-        padding: 12,
-        borderRadius: 8,
-        background: 'var(--theme-elevation-150, #21262d)',
-        border: '1px solid var(--theme-border-color, #30363d)',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: '6px',
+        padding: '5px 7px',
+        borderRadius: '4px',
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.06)',
       }}
     >
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 700,
-          color: 'var(--theme-text-muted, #8b949e)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          marginBottom: 6,
-        }}
-      >
-        {label}
-      </div>
-      {imageUrl && (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          src={imageUrl}
-          alt={label}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
           style={{
-            width: '100%',
-            height: 'auto',
-            maxHeight: 120,
-            objectFit: 'cover',
-            borderRadius: 6,
-            marginBottom: 8,
-            border: '1px solid var(--theme-border-color, #30363d)',
+            fontSize: '9px',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            color: 'var(--theme-text-muted, #8b949e)',
           }}
-        />
-      )}
-      <p
+        >
+          {label}
+        </div>
+        <div
+          style={{
+            fontSize: '11px',
+            color: 'var(--theme-text-color, #f0f6fc)',
+            wordBreak: 'break-word',
+            lineHeight: 1.3,
+            marginTop: '2px',
+          }}
+        >
+          {value}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onApply}
+        disabled={applied}
         style={{
-          margin: '0 0 8px',
-          fontSize: 11,
-          color: 'var(--theme-text-color, #f5f0e8)',
-          lineHeight: 1.5,
-          wordBreak: 'break-word',
-          whiteSpace: 'pre-line',
+          padding: '3px 6px',
+          borderRadius: '4px',
+          border: 'none',
+          background: applied ? 'rgba(46, 160, 67, 0.2)' : '#1f6feb',
+          color: applied ? '#3fb950' : '#fff',
+          fontSize: '10px',
+          fontWeight: 600,
+          cursor: applied ? 'default' : 'pointer',
+          flexShrink: 0,
         }}
       >
-        {value}
-      </p>
-      <button className="ai-apply-btn" disabled={applied} onClick={onApply}>
-        {applied ? '✓ Applied' : `Apply ${label}`}
+        {applied ? '✓' : 'Apply'}
       </button>
     </div>
   );

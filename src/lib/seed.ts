@@ -139,14 +139,6 @@ async function seed() {
     },
   });
 
-  const defaultEditorialReview = {
-    factChecked: true,
-    sourcesChecked: true,
-    imageRightsChecked: true,
-    reviewedBy: 'Editor-in-Chief',
-    reviewedAt: new Date().toISOString(),
-  };
-
   const defaultSources = [
     { name: 'Globdot Wire Services', url: 'https://globdot.com' },
   ];
@@ -165,7 +157,6 @@ async function seed() {
       isFeatured: true,
       status: 'published',
       sourceLinks: defaultSources,
-      editorialReview: defaultEditorialReview,
       publishedAt: new Date().toISOString(),
       readTime: 5,
       content: makeLexical([
@@ -185,7 +176,6 @@ async function seed() {
       homepageSlot: 'secondary',
       status: 'published',
       sourceLinks: defaultSources,
-      editorialReview: defaultEditorialReview,
       publishedAt: new Date(Date.now() - 3600000).toISOString(),
       readTime: 4,
       content: makeLexical([
@@ -205,7 +195,6 @@ async function seed() {
       homepageSlot: 'secondary',
       status: 'published',
       sourceLinks: defaultSources,
-      editorialReview: defaultEditorialReview,
       publishedAt: new Date(Date.now() - 7200000).toISOString(),
       readTime: 5,
       content: makeLexical([
@@ -226,7 +215,6 @@ async function seed() {
       isBreaking: false,
       status: 'published',
       sourceLinks: defaultSources,
-      editorialReview: defaultEditorialReview,
       publishedAt: new Date(Date.now() - 10800000).toISOString(),
       readTime: 6,
       content: makeLexical([

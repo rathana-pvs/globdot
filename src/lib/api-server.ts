@@ -3,15 +3,7 @@ import { unstable_cache } from 'next/cache';
 
 export type ArticleDoc = any;
 
-const publicationWhere: any = process.env.CONTENT_MODE === 'production'
-  ? {
-      and: [
-        { status: { equals: 'published' } },
-        { 'editorialReview.factChecked': { equals: true } },
-        { 'editorialReview.sourcesChecked': { equals: true } },
-      ],
-    }
-  : { status: { equals: 'published' } };
+const publicationWhere: any = { status: { equals: 'published' } };
 
 export const getPublishedArticles = unstable_cache(
   async (limit = 20): Promise<ArticleDoc[]> => {

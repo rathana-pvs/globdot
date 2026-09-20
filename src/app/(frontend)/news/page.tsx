@@ -21,6 +21,7 @@ const sections = [
 
 export default async function NewsPage() {
   const stories = await getPublishedArticles(60);
+  const [leadStory, ...restStories] = stories;
 
   return (
     <main id="content" className="shell channel-page news-page">
@@ -38,11 +39,23 @@ export default async function NewsPage() {
       </nav>
 
       {stories.length > 0 ? (
-        <section className="all-news-grid" aria-label="All published news">
-          {stories.map((story: any) => (
-            <StoryCard story={story} key={story.id} />
-          ))}
-        </section>
+        <>
+          {/* Lead story — expanded horizontal hero card */}
+          {leadStory && (
+            <section className="news-lead-story" aria-label="Top story">
+              <StoryCard story={leadStory} horizontal />
+            </section>
+          )}
+
+          {/* Remaining stories — 3-column grid */}
+          {restStories.length > 0 && (
+            <section className="all-news-grid" aria-label="All published news">
+              {restStories.map((story: any) => (
+                <StoryCard story={story} key={story.id} />
+              ))}
+            </section>
+          )}
+        </>
       ) : (
         <div className="empty-state">
           <h2>The newsroom is preparing today&apos;s report.</h2>

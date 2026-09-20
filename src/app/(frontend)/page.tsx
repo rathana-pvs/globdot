@@ -78,8 +78,8 @@ export default async function Home() {
         <section className="breaking-strip" aria-label="Breaking news">
           <div className="shell breaking-inner">
             <strong>Breaking</strong>
-            <span>{breaking.title}</span>
-            <Link href={`/article/${breaking.slug}`}>Read now →</Link>
+            <Link href={`/article/${breaking.slug}`} className="breaking-title">{breaking.title}</Link>
+            <Link href={`/article/${breaking.slug}`} className="breaking-cta">Read now →</Link>
           </div>
         </section>
       )}
@@ -136,6 +136,7 @@ export default async function Home() {
                   <span>By {leadAuthor}</span>
                   <span>{lead.readTime || 3} min read</span>
                   {lead.dateline && <span>{lead.dateline}</span>}
+                  <span>{formatTime(lead.publishedAt)}</span>
                 </div>
               </div>
             </article>

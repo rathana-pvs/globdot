@@ -13,6 +13,32 @@ type Node = {
   [key: string]: any;
 };
 
+export function getYouTubeVideoId(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  const match = trimmed.match(
+    /(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i,
+  );
+  return match ? match[1] : null;
+}
+
+function YouTubeEmbed({ videoId, keyName }: { videoId: string; keyName: string }) {
+  return (
+    <figure key={keyName} className="my-8 rounded-xl overflow-hidden shadow-lg border border-[var(--border)] bg-black">
+      <div className="relative w-full aspect-video" style={{ aspectRatio: '16 / 9' }}>
+        <iframe
+          src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+          title="YouTube video player"
+          className="absolute inset-0 w-full h-full border-0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          loading="lazy"
+        />
+      </div>
+    </figure>
+  );
+}
+
 export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element[] {
   return nodes.map((node, i) => {
     const nodeKey = `${keyPrefix}-${i}`;
@@ -39,6 +65,27 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
       }
 
       return text as any;
+    }
+
+    // Check if the paragraph represents a standalone YouTube video embed
+    if (node.type === 'paragraph') {
+      // 1. Single link or autolink child with YouTube URL
+      if (node.children?.length === 1 && (node.children[0].type === 'link' || node.children[0].type === 'autolink')) {
+        const linkUrl = node.children[0].fields?.url || node.children[0].url || '';
+        const videoId = getYouTubeVideoId(linkUrl);
+        if (videoId) {
+          return <YouTubeEmbed key={nodeKey} videoId={videoId} keyName={nodeKey} />;
+        }
+      }
+
+      // 2. Plain text child containing solely a YouTube URL
+      const textOnly = node.children?.map((c) => c.text || '').join('').trim() || '';
+      if (textOnly && /^https?:\/\/[^\s]+$/.test(textOnly)) {
+        const directVideoId = getYouTubeVideoId(textOnly);
+        if (directVideoId) {
+          return <YouTubeEmbed key={nodeKey} videoId={directVideoId} keyName={nodeKey} />;
+        }
+      }
     }
 
     const children = node.children ? serializeLexical(node.children, `${nodeKey}-c`) : null;
@@ -74,16 +121,21 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
             {children}
           </blockquote>
         );
-      case 'link':
+      case 'autolink':
+      case 'link': {
+        const linkUrl = node.fields?.url || node.url || '#';
         return (
           <Link
             key={nodeKey}
-            href={node.fields?.url || '#'}
+            href={linkUrl}
             className="underline underline-offset-3 font-medium text-[var(--global)]"
+            target={node.fields?.newTab ? '_blank' : undefined}
+            rel={node.fields?.newTab ? 'noopener noreferrer' : undefined}
           >
             {children}
           </Link>
         );
+      }
       case 'upload': {
         const media = node.value;
         if (!media || node.relationTo !== 'media') return null as any;
@@ -126,8 +178,11 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
         );
       case 'horizontalrule':
         return <hr key={nodeKey} className="my-8 border-t border-[var(--border)]" />;
-      case 'paragraph':
-      default: {
+      case 'linebreak':
+        return <br key={nodeKey} />;
+      case 'tab':
+        return <span key={nodeKey}>&emsp;</span>;
+      case 'paragraph': {
         const paragraphText = node.children?.map((child) => child.text || '').join('').trim() || '';
         const paragraphClass = paragraphText.startsWith('Q:')
           ? 'article-paragraph qa-question'
@@ -140,6 +195,8 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
           </p>
         );
       }
+      default:
+        return <Fragment key={nodeKey}>{children}</Fragment>;
     }
   }) as any;
 }

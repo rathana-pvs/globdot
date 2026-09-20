@@ -6,6 +6,8 @@ import { StoryCard } from '@/components/story-card';
 import { ArticleLeadImage } from '@/components/article-lead-image';
 import { RichText } from '@/components/RichText';
 import { AdSlot } from '@/components/ad-slot';
+import { ReadingProgressBar } from '@/components/reading-progress-bar';
+import { ArticleViewCount } from '@/components/article-view-count';
 import { getArticleBySlug, getArticlesBySection, getPublishedArticles } from '@/lib/api-server';
 import { formatDate, getMediaUrl } from '@/lib/utils';
 
@@ -169,6 +171,7 @@ export default async function ArticlePage({ params }: Props) {
 
   return (
     <main id="content" className={`article-page article-format-${storyType} shell`}>
+      <ReadingProgressBar />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -198,6 +201,7 @@ export default async function ArticlePage({ params }: Props) {
           <span>{storyType === 'opinion' ? 'Commentary by' : 'By'} <strong>{authorName}</strong></span>
           {story.dateline && <span>{story.dateline}</span>}
           <span>{formatDate(story.publishedAt, 'MMMM d, yyyy')}</span>
+          <ArticleViewCount slug={story.slug} initialViews={story.viewCount ?? 0} />
         </div>
 
       </header>

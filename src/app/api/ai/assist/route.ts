@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers as getNextHeaders } from 'next/headers';
 import { getPayloadClient } from '@/lib/payload';
 import * as cheerio from 'cheerio';
+import { cleanArticleSlug, slugify } from '@/lib/utils';
 
 function normalizeText(t: string): string {
   return (t || '')
@@ -278,36 +279,49 @@ async function searchWikimediaPressPhoto(searchQuery: string): Promise<{
   description: string;
   credit: string;
 } | null> {
-  try {
-    const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
-      searchQuery,
-    )}&gsrnamespace=6&prop=imageinfo&iiprop=url|extmetadata|size&format=json`;
-    const res = await fetch(searchUrl, {
-      headers: { 'User-Agent': 'GlobdotNews/1.0 (contact@globdot.com)' },
-      signal: AbortSignal.timeout(8_000),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const pages = data?.query?.pages || {};
-    for (const page of Object.values(pages) as any[]) {
-      const info = page.imageinfo?.[0];
-      if (!info?.url) continue;
-      const cleanPath = new URL(info.url).pathname;
-      const ext = cleanPath.split('.').pop()?.toLowerCase();
-      if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext || '')) continue;
-      if ((info.width || 0) < 500) continue;
-      const meta = info.extmetadata || {};
-      const desc = (meta.ImageDescription?.value || page.title || '').replace(/<[^>]+>/g, '').trim();
-      const artist = (meta.Artist?.value || '').replace(/<[^>]+>/g, '').trim();
-      const license = (meta.LicenseShortName?.value || '').trim();
-      return {
-        url: info.url,
-        description: desc.slice(0, 160) || searchQuery,
-        credit: `Photo: ${artist ? artist.slice(0, 50) : 'Wikimedia Commons'}${license ? ` / ${license}` : ''}`,
-      };
+  const cleanQ = (searchQuery || '').trim();
+  if (!cleanQ) return null;
+
+  const candidates = [
+    cleanQ,
+    cleanQ.replace(/[^a-zA-Z0-9\s]/g, '').trim(),
+    cleanQ.split(/\s+/).slice(0, 2).join(' '),
+  ].filter(Boolean);
+
+  const uniqueQueries = Array.from(new Set(candidates));
+
+  for (const q of uniqueQueries) {
+    try {
+      const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
+        q,
+      )}&gsrnamespace=6&prop=imageinfo&iiprop=url|extmetadata|size&format=json`;
+      const res = await fetch(searchUrl, {
+        headers: { 'User-Agent': 'GlobdotNews/1.0 (contact@globdot.com)' },
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const pages = data?.query?.pages || {};
+      for (const page of Object.values(pages) as any[]) {
+        const info = page.imageinfo?.[0];
+        if (!info?.url) continue;
+        const cleanPath = new URL(info.url).pathname;
+        const ext = cleanPath.split('.').pop()?.toLowerCase();
+        if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext || '')) continue;
+        if ((info.width || 0) < 400) continue;
+        const meta = info.extmetadata || {};
+        const desc = (meta.ImageDescription?.value || page.title || '').replace(/<[^>]+>/g, '').trim();
+        const artist = (meta.Artist?.value || '').replace(/<[^>]+>/g, '').trim();
+        const license = (meta.LicenseShortName?.value || '').trim();
+        return {
+          url: info.url,
+          description: desc.slice(0, 160) || q,
+          credit: `Photo: ${artist ? artist.slice(0, 50) : 'Wikimedia Commons'}${license ? ` / ${license}` : ''}`,
+        };
+      }
+    } catch (err: any) {
+      console.warn('[AI Assist] Wikimedia search failed:', q, err?.message);
     }
-  } catch (err: any) {
-    console.warn('[AI Assist] Wikimedia search failed:', err?.message);
   }
   return null;
 }
@@ -799,10 +813,136 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized. Please log in to CMS admin.' }, { status: 401 });
     }
 
-    const { action, title, content, storyType, url } = await req.json();
+    const { action, title, content, storyType, url, searchKeyword } = await req.json();
 
     if (!action) {
       return NextResponse.json({ error: 'Action is required' }, { status: 400 });
+    }
+
+    // ACTION 1: Generate metadata & SEO from manually authored content
+    if (action === 'metadata_only') {
+      const articleContent = (content || '').trim();
+      const existingTitle = (title || '').trim();
+
+      if (!articleContent && !existingTitle) {
+        return NextResponse.json(
+          { error: 'Write some content or enter a working title first so AI can analyze your article.' },
+          { status: 400 },
+        );
+      }
+
+      const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Globdot';
+
+      const prompt = `You are a world-class newsroom copy editor and SEO specialist. The journalist has written an article manually and needs metadata, taxonomy, and SEO generated based strictly on their text.
+
+${existingTitle ? `Current / Working Headline: "${existingTitle}"\n` : ''}
+Article Text:
+"""
+${articleContent.slice(0, 6000)}
+"""
+
+Analyze the article text above and return valid JSON with these exact fields:
+1. "title": A sharp, captivating, journalistic headline. If the current headline is strong, polish it; otherwise create an original high-impact headline.
+2. "standfirst": A high-impact lead summary paragraph strictly under 160 characters that captures the core essence without repeating the title verbatim.
+3. "slug": Clean, lowercase, hyphenated URL slug (e.g. "us-jobs-growth-inflation-data-fed").
+4. "sectionSlug": Choose the single most appropriate category: politics, business, tech, climate, culture, war-tension, analysis, other.
+5. "regionSlugs": Array of geographic relevance: ["americas", "europe", "asia", "middle-east", "africa", "oceania"]. Include only applicable regions.
+6. "metaTitle": SEO meta title strictly 50-60 characters ending with " — ${siteName}".
+7. "metaDescription": SEO meta description strictly 100-150 characters.
+8. "dateline": Uppercase city name only if reporting location is established in text (e.g. "WASHINGTON", "LONDON", "GENEVA"); otherwise an empty string.
+
+Return JSON with exact keys:
+{
+  "title": "...",
+  "standfirst": "...",
+  "slug": "...",
+  "sectionSlug": "...",
+  "regionSlugs": [...],
+  "metaTitle": "...",
+  "metaDescription": "...",
+  "dateline": "..."
+}`;
+
+      const rawText = await generateAiText(SYSTEM_PROMPT, prompt);
+      const generated = extractJsonFromText(rawText);
+
+      const taxonomy = await resolveEditorialTaxonomy(
+        payload,
+        generated.title || existingTitle,
+        articleContent,
+        generated.standfirst || '',
+        generated.dateline,
+        generated.sectionSlug,
+        generated.regionSlugs,
+      );
+
+      const finalSlug =
+        cleanArticleSlug(generated.slug || generated.title || existingTitle) ||
+        slugify(generated.slug || generated.title || existingTitle);
+
+      const result = enforceSeoLimits({
+        title: generated.title || existingTitle,
+        standfirst: generated.standfirst || '',
+        slug: finalSlug,
+        section: taxonomy.section,
+        sectionName: taxonomy.sectionName,
+        regions: taxonomy.regions,
+        regionNames: taxonomy.regionNames,
+        author: taxonomy.author,
+        authorName: taxonomy.authorName,
+        metaTitle: generated.metaTitle,
+        metaDescription: generated.metaDescription,
+        dateline: generated.dateline || '',
+      });
+
+      return NextResponse.json({ success: true, data: result });
+    }
+
+    // ACTION 2: Find real editorial cover photo (Wikimedia Commons press photo - no AI generated images)
+    if (action === 'find_cover_image') {
+      const keyword = (searchKeyword || '').trim();
+      const existingTitle = (title || '').trim();
+      const articleContent = (content || '').trim();
+
+      let searchEntity = keyword;
+      if (!searchEntity) {
+        if (!existingTitle && !articleContent) {
+          return NextResponse.json(
+            { error: 'Provide an article title, content, or search keyword to find an image.' },
+            { status: 400 },
+          );
+        }
+        searchEntity = await extractVisualEntity(existingTitle, articleContent.slice(0, 400));
+      }
+
+      const coverMedia = await createLegalEditorialCoverImage(
+        payload,
+        searchEntity,
+        existingTitle || searchEntity,
+      );
+
+      if (!coverMedia) {
+        return NextResponse.json(
+          {
+            error: `No suitable press photos found for "${searchEntity}". Try typing a specific person, place, or institution in the search box.`,
+            searchEntity,
+          },
+          { status: 404 },
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          searchEntity,
+          coverImage: coverMedia.id,
+          coverImageInfo: coverMedia,
+          imageUrl: coverMedia.url,
+          credit: coverMedia.credit,
+          caption: coverMedia.caption,
+          alt: coverMedia.alt,
+        },
+      });
     }
 
     if (action === 'scrape_direct') {
@@ -886,13 +1026,6 @@ Return JSON with exactly these keys:
           scrapedImageUrl: coverMedia ? coverMedia.url : undefined,
           sourceLinks,
           sourceCount: sourceLinks.length,
-          editorialReview: {
-            factChecked: true,
-            sourcesChecked: true,
-            imageRightsChecked: true,
-            reviewedBy: `${taxonomy.authorName} (Globdot Newsroom)`,
-            reviewedAt: new Date().toISOString(),
-          },
           sourceWarnings: [
             'All editorial fields, source links, category, regions, and checklist verified.',
             coverMedia
@@ -1001,13 +1134,6 @@ Return JSON with exact keys: { "standfirst", "metaTitle", "metaDescription" }`;
       aiData.status = 'published';
       aiData.sourceLinks = sourceLinks;
       aiData.sourceCount = sourceLinks.length;
-      aiData.editorialReview = {
-        factChecked: true,
-        sourcesChecked: true,
-        imageRightsChecked: true,
-        reviewedBy: `${taxonomy.authorName} (Globdot Newsroom)`,
-        reviewedAt: new Date().toISOString(),
-      };
       if (coverMedia) {
         aiData.coverImage = coverMedia.id;
         aiData.coverImageInfo = coverMedia;

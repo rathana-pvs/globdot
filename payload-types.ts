@@ -175,12 +175,12 @@ export interface Article {
    */
   coverFocalPosition?: ('auto' | 'top' | 'center' | 'bottom') | null;
   /**
-   * Direct links to primary documents or reporting used for this article.
+   * Optional links to primary documents or reporting used for this article.
    */
   sourceLinks?:
     | {
-        name: string;
-        url: string;
+        name?: string | null;
+        url?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -207,24 +207,20 @@ export interface Article {
    * Auto-calculated
    */
   readTime?: number | null;
+  /**
+   * Total verified page reads (tracked automatically)
+   */
   viewCount?: number | null;
   /**
    * Editorial correction or clarification note
    */
   correctionNote?: string | null;
-  /**
-   * Every item must be true and accurate before publication.
-   */
-  editorialReview?: {
-    factChecked?: boolean | null;
-    sourcesChecked?: boolean | null;
-    imageRightsChecked?: boolean | null;
-    reviewedBy?: string | null;
-    reviewedAt?: string | null;
-  };
   og?: {
     metaTitle?: string | null;
     metaDescription?: string | null;
+    /**
+     * Auto-synced from Cover Image by default. Can be overridden.
+     */
     ogImage?: (number | null) | Media;
   };
   meta?: {
@@ -583,15 +579,6 @@ export interface ArticlesSelect<T extends boolean = true> {
   readTime?: T;
   viewCount?: T;
   correctionNote?: T;
-  editorialReview?:
-    | T
-    | {
-        factChecked?: T;
-        sourcesChecked?: T;
-        imageRightsChecked?: T;
-        reviewedBy?: T;
-        reviewedAt?: T;
-      };
   og?:
     | T
     | {
