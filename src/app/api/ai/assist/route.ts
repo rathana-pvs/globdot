@@ -28,9 +28,9 @@ const REQUEST_HEADERS = {
   'Accept-Language': 'en-US,en;q=0.5',
 };
 
-const PRIMARY_MODEL_ID = 'gemini-2.5-flash';
-const FALLBACK_MODEL_ID = 'gemini-3.6-flash';
-const TERTIARY_MODEL_ID = 'gemini-3.5-flash-lite';
+const PRIMARY_MODEL_ID = 'gemini-3.5-flash-lite';
+const FALLBACK_MODEL_ID = 'gemini-3.5-flash';
+const TERTIARY_MODEL_ID = 'gemini-3.6-flash';
 
 function getGoogleAI() {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -296,7 +296,7 @@ async function searchWikimediaPressPhoto(searchQuery: string): Promise<{
         q,
       )}&gsrnamespace=6&prop=imageinfo&iiprop=url|extmetadata|size&format=json`;
       const res = await fetch(searchUrl, {
-        headers: { 'User-Agent': 'GlobdotNews/1.0 (contact@globdot.com)' },
+        headers: { 'User-Agent': 'GlobdotNews/1.0 (yourssmiara@gmail.com)' },
         signal: AbortSignal.timeout(8_000),
       });
       if (!res.ok) continue;
@@ -332,7 +332,7 @@ async function createLegalEditorialCoverImage(payload: any, searchKeyword: strin
     if (!photo) return null;
 
     const imgRes = await fetch(photo.url, {
-      headers: { 'User-Agent': 'GlobdotNews/1.0 (editor@globdot.com)' },
+      headers: { 'User-Agent': 'GlobdotNews/1.0 (yourssmiara@gmail.com)' },
       signal: AbortSignal.timeout(15_000),
     });
     if (!imgRes.ok) return null;

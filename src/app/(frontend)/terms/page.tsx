@@ -87,7 +87,7 @@ export default function TermsPage() {
       <p>
         We hold ourselves accountable for factual reporting. If you believe an article contains a factual error,
         please review our <Link href="/corrections">Corrections Policy</Link> or notify our editors at{' '}
-        <strong>corrections@globdot.com</strong>.
+        <a href="mailto:yourssmiara@gmail.com"><strong>yourssmiara@gmail.com</strong></a>.
       </p>
 
       <h2>7. Limitation of Liability</h2>
@@ -109,8 +109,8 @@ export default function TermsPage() {
         For legal notices or questions regarding these terms, contact:
       </p>
       <p>
-        <strong>Email:</strong> legal@globdot.com<br />
-        <strong>Newsroom:</strong> editor@globdot.com
+        <strong>Email:</strong> <a href="mailto:yourssmiara@gmail.com">yourssmiara@gmail.com</a><br />
+        <strong>Newsroom:</strong> <a href="mailto:yourssmiara@gmail.com">yourssmiara@gmail.com</a>
       </p>
     </InfoPage>
   );

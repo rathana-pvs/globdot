@@ -51,7 +51,8 @@ export default function StandardsPage() {
       <h2>Corrections</h2>
       <p>
         Substantive errors are corrected promptly with a dated explanation on the affected article. To report an
-        error, follow our <Link href="/corrections">Corrections Policy</Link> or email corrections@globdot.com.
+        error, follow our <Link href="/corrections">Corrections Policy</Link> or email{' '}
+        <a href="mailto:yourssmiara@gmail.com">yourssmiara@gmail.com</a>.
       </p>
     </InfoPage>
   );

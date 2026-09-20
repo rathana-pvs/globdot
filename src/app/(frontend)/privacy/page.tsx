@@ -190,8 +190,8 @@ export default function PrivacyPage() {
         rights, please contact our data governance desk:
       </p>
       <p>
-        <strong>Email:</strong> privacy@globdot.com<br />
-        <strong>Editorial:</strong> editor@globdot.com
+        <strong>Email:</strong> <a href="mailto:yourssmiara@gmail.com">yourssmiara@gmail.com</a><br />
+        <strong>Editorial:</strong> <a href="mailto:yourssmiara@gmail.com">yourssmiara@gmail.com</a>
       </p>
     </InfoPage>
   );

@@ -17,26 +17,26 @@ export default function ContactPage() {
       <h2>Editorial Questions</h2>
       <p>
         For reporting questions, source material, or story suggestions, email{' '}
-        <a href="mailto:editor@globdot.com">editor@globdot.com</a>.
+        <a href="mailto:yourssmiara@gmail.com">yourssmiara@gmail.com</a>.
       </p>
 
       <h2>Corrections</h2>
       <p>
         Send the headline, URL, disputed claim, and supporting evidence to{' '}
-        <a href="mailto:corrections@globdot.com">corrections@globdot.com</a>. Read our{' '}
+        <a href="mailto:yourssmiara@gmail.com">yourssmiara@gmail.com</a>. Read our{' '}
         <Link href="/corrections">Corrections Policy</Link> for more information.
       </p>
 
       <h2>Privacy</h2>
       <p>
         Questions or requests concerning personal information can be sent to{' '}
-        <a href="mailto:privacy@globdot.com">privacy@globdot.com</a>. See our{' '}
+        <a href="mailto:yourssmiara@gmail.com">yourssmiara@gmail.com</a>. See our{' '}
         <Link href="/privacy">Privacy Policy</Link> for details.
       </p>
 
       <h2>Commercial Enquiries</h2>
       <p>
-        For advertising or partnerships, email <a href="mailto:ads@globdot.com">ads@globdot.com</a>. Commercial
+        For advertising or partnerships, email <a href="mailto:yourssmiara@gmail.com">yourssmiara@gmail.com</a>. Commercial
         relationships do not influence editorial decisions.
       </p>
     </InfoPage>
