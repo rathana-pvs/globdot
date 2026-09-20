@@ -33,7 +33,7 @@ export function SiteHeader() {
           <Link className="brand" href="/" aria-label="Globdot home">
             <Image className="brand-logo" src="/globdot-logo.svg" alt="Globdot" width={320} height={80} priority />
           </Link>
-          <div className="header-actions"><Link className="search-button" href="/search"><span className="search-label">Search</span><span className="search-icon" aria-hidden="true">⌕</span></Link><Link className="subscribe-button" href="/rss.xml">RSS feed</Link></div>
+          <div className="header-actions"><Link className="search-button" href="/search"><span className="search-label">Search</span><span className="search-icon" aria-hidden="true">⌕</span></Link></div>
         </div>
         <nav className="shell primary-nav" aria-label="Primary navigation">
           {channels.map(([label, href]) => {

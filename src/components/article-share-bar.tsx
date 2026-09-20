@@ -9,7 +9,7 @@ interface ArticleShareBarProps {
   sectionName?: string;
 }
 
-export function ArticleShareBar({ title, url, readTime = 3, sectionName }: ArticleShareBarProps) {
+export function ArticleShareBar({ title, url, readTime: _readTime = 3, sectionName }: ArticleShareBarProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -96,10 +96,11 @@ export function ArticleShareBar({ title, url, readTime = 3, sectionName }: Artic
         </button>
       </div>
 
-      <div className="article-meta-tags">
-        {sectionName && <span className="meta-pill">{sectionName}</span>}
-        <span className="reading-time-indicator">{readTime} min read</span>
-      </div>
+      {sectionName && (
+        <div className="article-meta-tags">
+          <span className="meta-pill">{sectionName}</span>
+        </div>
+      )}
     </div>
   );
 }

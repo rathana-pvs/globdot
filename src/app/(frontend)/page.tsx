@@ -134,7 +134,6 @@ export default async function Home() {
                 {lead.standfirst && <p className="lead-standfirst">{lead.standfirst}</p>}
                 <div className="story-meta">
                   <span>By {leadAuthor}</span>
-                  <span>{lead.readTime || 3} min read</span>
                   {lead.dateline && <span>{lead.dateline}</span>}
                   <span>{formatTime(lead.publishedAt)}</span>
                 </div>
@@ -177,7 +176,6 @@ export default async function Home() {
                       </Link>
                       {index === 0 && story.standfirst && <p className="briefing-standfirst">{story.standfirst}</p>}
                       <div className="story-meta">
-                        <span>{story.readTime || 3} min read</span>
                         <span>{formatTime(story.publishedAt)}</span>
                       </div>
                     </div>
@@ -249,7 +247,6 @@ export default async function Home() {
                     {story.standfirst && <p>{story.standfirst}</p>}
                     <div className="story-meta">
                       <span>By {story.author?.name || story.author || 'Globdot News Desk'}</span>
-                      <span>{story.readTime || 5} min read</span>
                       {story.dateline && <span>{story.dateline}</span>}
                     </div>
                   </div>
@@ -296,7 +293,6 @@ export default async function Home() {
                     )}
                     <div className="perspective-meta">
                       <span className="kicker">{story.section?.name || 'Opinion'}</span>
-                      <span className="perspective-read">{story.readTime || 4} min read</span>
                     </div>
                   </div>
                 </article>

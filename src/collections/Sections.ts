@@ -28,7 +28,7 @@ export const Sections: CollectionConfig = {
     { name: 'name', type: 'text', required: true },
     { name: 'slug', type: 'text', unique: true },
     { name: 'description', type: 'textarea' },
-    { name: 'color', type: 'text', defaultValue: '#2457ff', required: true },
+    { name: 'color', type: 'text', defaultValue: '#e02f2f', required: true },
     { name: 'sortOrder', type: 'number', defaultValue: 0, required: true },
     { name: 'isVisible', type: 'checkbox', defaultValue: true },
   ],

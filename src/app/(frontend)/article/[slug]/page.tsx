@@ -81,7 +81,6 @@ export default async function ArticlePage({ params }: Props) {
 
   const sectionName = story.section?.name || 'Politics';
   const sectionSlug = story.section?.slug || 'politics';
-  const sectionColor = story.section?.color || '#2457ff';
   const storyType = story.storyType || 'news';
   const authorName = story.author?.name || story.author || 'Globdot News Desk';
   const imageUrl = story?.coverImage ? getMediaUrl(story.coverImage, '') : '';
@@ -188,7 +187,6 @@ export default async function ArticlePage({ params }: Props) {
             <Link
               href={`/section/${sectionSlug}`}
               className="breadcrumb-kicker"
-              style={{ color: sectionColor }}
             >
               {sectionName}
             </Link>
@@ -347,7 +345,6 @@ export default async function ArticlePage({ params }: Props) {
                       <Link href={`/article/${item.slug}`}>
                         <h4>{item.title}</h4>
                       </Link>
-                      <span className="rail-story-read">{item.readTime || 3} min read</span>
                     </div>
                   </article>
                 ))}
@@ -374,7 +371,7 @@ export default async function ArticlePage({ params }: Props) {
           <div className="related-header">
             <div className="related-title-group">
               <div className="related-kicker-row">
-                <span className="desk-indicator" style={{ backgroundColor: sectionColor }} />
+                <span className="desk-indicator" />
                 <span className="related-kicker">Keep Reading</span>
               </div>
               <h2 className="related-heading">Related Coverage & Analysis</h2>

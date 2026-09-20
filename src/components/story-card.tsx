@@ -48,7 +48,6 @@ export function StoryCard({ story, horizontal = false }: { story: any; horizonta
         <p>{story.standfirst}</p>
         <div className="story-meta">
           <span>{authorName}</span>
-          <span>{story.readTime || 3} min read</span>
           <span>{formatDate(story.publishedAt)}</span>
         </div>
       </div>
