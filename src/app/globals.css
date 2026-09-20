@@ -35,6 +35,18 @@
 .byline { display:flex; flex-wrap:wrap; align-items:center; gap:12px; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding-bottom:12px; }
 .byline strong { color:var(--ink); font-weight:700; }
 .byline span + span:before { content:'•'; margin-right:12px; color:var(--border); }
+.author-byline-wrap { position:relative; display:inline-flex; align-items:baseline; }
+.author-byline-trigger { background:transparent; border:none; padding:0; margin:0; color:var(--ink); font-family:inherit; font-size:inherit; font-weight:700; letter-spacing:inherit; text-transform:inherit; cursor:pointer; display:inline-flex; align-items:center; text-decoration:underline; text-decoration-color:transparent; text-underline-offset:3px; transition:color .15s ease, text-decoration-color .15s ease; }
+.author-byline-trigger:hover, .author-byline-trigger:focus-visible, .author-byline-trigger[aria-expanded="true"] { text-decoration-color:var(--ink); }
+.author-bio-backdrop { position:fixed; inset:0; z-index:99; background-color:rgba(0,0,0,0.12); }
+.author-bio-popover { position:absolute; top:calc(100% + 8px); left:0; z-index:100; width:min(390px,calc(100vw - 32px)); background-color:var(--paper); border:1px solid var(--border); box-shadow:0 12px 28px rgba(0,0,0,0.12),0 4px 10px rgba(0,0,0,0.05); padding:20px; border-radius:4px; text-transform:none; letter-spacing:normal; color:var(--ink); font-family:var(--font-ui),Arial,sans-serif; animation:authorPopoverFadeIn .18s ease-out; }
+@keyframes authorPopoverFadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+@media (max-width:640px) {
+  .author-bio-backdrop { background-color:rgba(0,0,0,0.4); }
+  .author-bio-popover { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(380px,calc(100vw - 32px)); max-height:85vh; overflow-y:auto; box-shadow:0 20px 35px rgba(0,0,0,0.3); animation:authorModalFadeIn .2s ease-out; }
+}
+@keyframes authorModalFadeIn { from { opacity:0; transform:translate(-50%,-46%); } to { opacity:1; transform:translate(-50%,-50%); } }
+
 
 /* Article Share Bar */
 .article-share-bar { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:10px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin-bottom:28px; }

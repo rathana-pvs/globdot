@@ -8,6 +8,7 @@ import { RichText } from '@/components/RichText';
 import { AdSlot } from '@/components/ad-slot';
 import { ReadingProgressBar } from '@/components/reading-progress-bar';
 import { ArticleViewCount } from '@/components/article-view-count';
+import { ArticleAuthorByline } from '@/components/article-author-byline';
 import { getArticleBySlug, getArticlesBySection, getPublishedArticles } from '@/lib/api-server';
 import { formatDate, getMediaUrl } from '@/lib/utils';
 
@@ -82,7 +83,17 @@ export default async function ArticlePage({ params }: Props) {
   const sectionName = story.section?.name || 'Politics';
   const sectionSlug = story.section?.slug || 'politics';
   const storyType = story.storyType || 'news';
-  const authorName = story.author?.name || story.author || 'Globdot News Desk';
+  const rawAuthor = story.author;
+  const authorObj = typeof rawAuthor === 'object' && rawAuthor !== null ? rawAuthor : null;
+  const authorName = authorObj?.name || (typeof rawAuthor === 'string' ? rawAuthor : 'Globdot News Desk');
+  const authorData = {
+    name: authorName,
+    roleTitle: authorObj?.roleTitle,
+    bio: authorObj?.bio,
+    avatarUrl: authorObj?.avatar ? getMediaUrl(authorObj.avatar, '') : undefined,
+    socialUrl: authorObj?.socialUrl,
+    slug: authorObj?.slug,
+  };
   const imageUrl = story?.coverImage ? getMediaUrl(story.coverImage, '') : '';
 
   // Parallel fetch: section stories for the rail & published stories for related grid
@@ -196,7 +207,10 @@ export default async function ArticlePage({ params }: Props) {
         <h1>{story.title}</h1>
         <p className="standfirst">{story.standfirst}</p>
         <div className="byline">
-          <span>{storyType === 'opinion' ? 'Commentary by' : 'By'} <strong>{authorName}</strong></span>
+          <span>
+            {storyType === 'opinion' ? 'Commentary by' : 'By'}{' '}
+            <ArticleAuthorByline author={authorData} />
+          </span>
           {story.dateline && <span>{story.dateline}</span>}
           <span>{formatDate(story.publishedAt, 'MMMM d, yyyy')}</span>
           <ArticleViewCount slug={story.slug} initialViews={story.viewCount ?? 0} />
@@ -325,74 +339,6 @@ export default async function ArticlePage({ params }: Props) {
             </div>
           )}
 
-          {/* Author Byline & Bio Card */}
-          {story.author && typeof story.author === 'object' && (
-            <section
-              className="article-author-card"
-              style={{
-                marginTop: '40px',
-                padding: '24px',
-                borderTop: '2px solid #111',
-                borderBottom: '1px solid #e5e5e5',
-                display: 'flex',
-                gap: '20px',
-                alignItems: 'flex-start',
-              }}
-            >
-              <div
-                style={{
-                  flexShrink: 0,
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  backgroundColor: '#f0f0f0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  color: '#444',
-                  fontSize: '1.2rem',
-                  overflow: 'hidden',
-                }}
-              >
-                {story.author.avatar ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={getMediaUrl(story.author.avatar, '')}
-                    alt={story.author.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <span>{story.author.name?.charAt(0) || 'G'}</span>
-                )}
-              </div>
-              <div style={{ flexGrow: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6f42c1' }}>
-                    Reporting Byline
-                  </span>
-                </div>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.15rem', fontWeight: 700 }}>
-                  {story.author.name}
-                </h3>
-                {story.author.roleTitle && (
-                  <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem', fontWeight: 600, color: '#555' }}>
-                    {story.author.roleTitle}
-                  </p>
-                )}
-                {story.author.bio && (
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#444', lineHeight: 1.5 }}>
-                    {story.author.bio}
-                  </p>
-                )}
-                <div style={{ marginTop: '10px', fontSize: '0.85rem' }}>
-                  <Link href="/masthead" style={{ color: '#111', fontWeight: 600, textDecoration: 'underline' }}>
-                    View Newsroom Masthead →
-                  </Link>
-                </div>
-              </div>
-            </section>
-          )}
         </article>
 
         <aside className="article-rail" aria-label="Editorial sidebar">
