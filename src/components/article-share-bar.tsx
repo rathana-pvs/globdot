@@ -1,15 +1,25 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ArticleViewCount } from '@/components/article-view-count';
 
 interface ArticleShareBarProps {
   title: string;
   url?: string;
   readTime?: number;
   sectionName?: string;
+  slug?: string;
+  initialViews?: number;
 }
 
-export function ArticleShareBar({ title, url, readTime: _readTime = 3, sectionName }: ArticleShareBarProps) {
+export function ArticleShareBar({
+  title,
+  url,
+  readTime: _readTime = 3,
+  sectionName,
+  slug,
+  initialViews = 0,
+}: ArticleShareBarProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -96,9 +106,10 @@ export function ArticleShareBar({ title, url, readTime: _readTime = 3, sectionNa
         </button>
       </div>
 
-      {sectionName && (
+      {(slug || sectionName) && (
         <div className="article-meta-tags">
-          <span className="meta-pill">{sectionName}</span>
+          {slug && <ArticleViewCount slug={slug} initialViews={initialViews} />}
+          {sectionName && <span className="meta-pill">{sectionName}</span>}
         </div>
       )}
     </div>

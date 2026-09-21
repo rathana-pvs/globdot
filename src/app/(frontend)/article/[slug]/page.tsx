@@ -7,7 +7,7 @@ import { ArticleLeadImage } from '@/components/article-lead-image';
 import { RichText } from '@/components/RichText';
 import { AdSlot } from '@/components/ad-slot';
 import { ReadingProgressBar } from '@/components/reading-progress-bar';
-import { ArticleViewCount } from '@/components/article-view-count';
+import { ArticleShareBar } from '@/components/article-share-bar';
 import { ArticleAuthorByline } from '@/components/article-author-byline';
 import { getArticleBySlug, getArticlesBySection, getPublishedArticles } from '@/lib/api-server';
 import { formatDate, getMediaUrl } from '@/lib/utils';
@@ -212,10 +212,16 @@ export default async function ArticlePage({ params }: Props) {
             <ArticleAuthorByline author={authorData} />
           </span>
           {story.dateline && <span>{story.dateline}</span>}
-          <span>{formatDate(story.publishedAt, 'MMMM d, yyyy')}</span>
-          <ArticleViewCount slug={story.slug} initialViews={story.viewCount ?? 0} />
+          <span>{formatDate(story.publishedAt, 'MMM d, yyyy')}</span>
         </div>
 
+        <ArticleShareBar
+          title={story.title}
+          url={articleUrl}
+          sectionName={sectionName}
+          slug={story.slug}
+          initialViews={story.viewCount ?? 0}
+        />
       </header>
 
       <div className="article-layout">
@@ -369,14 +375,6 @@ export default async function ArticlePage({ params }: Props) {
 
           <div className="rail-ad-container">
             <AdSlot placement="sidebar" />
-          </div>
-
-          <div className="rail-standards-card">
-            <h4>Editorial Integrity</h4>
-            <p>
-              Globdot reporting adheres to strict nonpartisan accuracy and independence standards.
-            </p>
-            <Link href="/contact">Contact the Newsroom →</Link>
           </div>
         </aside>
       </div>
