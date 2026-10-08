@@ -79,6 +79,11 @@ export default function FrontendLayout({
         {children}
         <SiteFooter />
         <AnalyticsBeacon />
+        <Script
+          id="adskeeper-loader"
+          strategy="afterInteractive"
+          src="https://jsc.adskeeper.com/site/1112395.js"
+        />
       </body>
     </html>
   );

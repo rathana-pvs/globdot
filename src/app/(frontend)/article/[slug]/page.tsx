@@ -6,6 +6,7 @@ import { StoryCard } from '@/components/story-card';
 import { ArticleLeadImage } from '@/components/article-lead-image';
 import { RichText } from '@/components/RichText';
 import { AdSlot } from '@/components/ad-slot';
+import { AdskeeperWidget } from '@/components/adskeeper-widget';
 import { ReadingProgressBar } from '@/components/reading-progress-bar';
 import { ArticleShareBar } from '@/components/article-share-bar';
 import { ArticleAuthorByline } from '@/components/article-author-byline';
@@ -345,6 +346,12 @@ export default async function ArticlePage({ params }: Props) {
             </div>
           )}
 
+          {/* feed_bottom: Native recommendation feed placed directly after article content */}
+          <AdskeeperWidget
+            widgetId="2092311"
+            placement="feed"
+            className="article-bottom-feed"
+          />
         </article>
 
         <aside className="article-rail" aria-label="Editorial sidebar">

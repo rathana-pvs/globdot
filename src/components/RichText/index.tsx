@@ -4,9 +4,10 @@ import { serializeLexical } from './serialize';
 export type RichTextProps = {
   content: any;
   className?: string;
+  enableAds?: boolean;
 };
 
-export const RichText = ({ content, className }: RichTextProps) => {
+export const RichText = ({ content, className, enableAds = true }: RichTextProps) => {
   if (!content) return null;
 
   // Lexical content structure: { root: { children: [...] } }
@@ -15,7 +16,7 @@ export const RichText = ({ content, className }: RichTextProps) => {
 
   return (
     <div className={`article-prose ${className || ''}`}>
-      {serializeLexical(rawNodes, 'article')}
+      {serializeLexical(rawNodes, 'article', { enableAds, isTopLevel: true })}
     </div>
   );
 };

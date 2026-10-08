@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getMediaUrl } from '@/lib/utils';
 import { QuoteHighlight } from './quote-highlight';
+import { AdskeeperWidget } from '@/components/adskeeper-widget';
 
 type Node = {
   type: string;
@@ -13,6 +14,11 @@ type Node = {
   format?: number;
   [key: string]: any;
 };
+
+export interface SerializeOptions {
+  enableAds?: boolean;
+  isTopLevel?: boolean;
+}
 
 export function getYouTubeVideoId(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
@@ -40,11 +46,17 @@ function YouTubeEmbed({ videoId, keyName }: { videoId: string; keyName: string }
   );
 }
 
-export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element[] {
-  return nodes.map((node, i) => {
+export function serializeLexical(
+  nodes: Node[],
+  keyPrefix = 'node',
+  options: SerializeOptions = { enableAds: false, isTopLevel: false }
+): JSX.Element[] {
+  let paragraphCount = 0;
+
+  return nodes.flatMap((node, i) => {
     const nodeKey = `${keyPrefix}-${i}`;
 
-    if (!node) return null as any;
+    if (!node) return [];
 
     if (node.type === 'text') {
       let text = <Fragment key={nodeKey}>{node.text}</Fragment>;
@@ -65,7 +77,7 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
         text = <code key={nodeKey}>{text}</code>;
       }
 
-      return text as any;
+      return [text as any];
     }
 
     // Check if the paragraph represents a standalone YouTube video embed
@@ -75,7 +87,7 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
         const linkUrl = node.children[0].fields?.url || node.children[0].url || '';
         const videoId = getYouTubeVideoId(linkUrl);
         if (videoId) {
-          return <YouTubeEmbed key={nodeKey} videoId={videoId} keyName={nodeKey} />;
+          return [<YouTubeEmbed key={nodeKey} videoId={videoId} keyName={nodeKey} />];
         }
       }
 
@@ -84,45 +96,47 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
       if (textOnly && /^https?:\/\/[^\s]+$/.test(textOnly)) {
         const directVideoId = getYouTubeVideoId(textOnly);
         if (directVideoId) {
-          return <YouTubeEmbed key={nodeKey} videoId={directVideoId} keyName={nodeKey} />;
+          return [<YouTubeEmbed key={nodeKey} videoId={directVideoId} keyName={nodeKey} />];
         }
       }
     }
 
-    const children = node.children ? serializeLexical(node.children, `${nodeKey}-c`) : null;
+    const children = node.children
+      ? serializeLexical(node.children, `${nodeKey}-c`, { enableAds: false, isTopLevel: false })
+      : null;
 
     const headingTag = node.type === 'heading' ? node.tag : node.type;
 
     switch (headingTag) {
       case 'h1':
       case 'h2':
-        return (
+        return [
           <h2 key={nodeKey} className="font-serif font-bold text-2xl sm:text-3xl mb-3 mt-8 text-[var(--ink)]">
             {children}
-          </h2>
-        );
+          </h2>,
+        ];
       case 'h3':
-        return (
+        return [
           <h3 key={nodeKey} className="font-serif font-bold text-xl sm:text-2xl mb-3 mt-6 text-[var(--ink)]">
             {children}
-          </h3>
-        );
+          </h3>,
+        ];
       case 'h4':
-        return (
+        return [
           <h4 key={nodeKey} className="font-serif font-bold text-lg sm:text-xl mb-2 mt-5 text-[var(--ink)]">
             {children}
-          </h4>
-        );
+          </h4>,
+        ];
       case 'quote':
-        return (
+        return [
           <QuoteHighlight key={nodeKey} node={node} nodeKey={nodeKey}>
             {children}
-          </QuoteHighlight>
-        );
+          </QuoteHighlight>,
+        ];
       case 'autolink':
       case 'link': {
         const linkUrl = node.fields?.url || node.url || '#';
-        return (
+        return [
           <Link
             key={nodeKey}
             href={linkUrl}
@@ -131,16 +145,16 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
             rel={node.fields?.newTab ? 'noopener noreferrer' : undefined}
           >
             {children}
-          </Link>
-        );
+          </Link>,
+        ];
       }
       case 'upload': {
         const media = node.value;
-        if (!media || node.relationTo !== 'media') return null as any;
+        if (!media || node.relationTo !== 'media') return [];
         const mediaUrl = getMediaUrl(media, '');
-        if (!mediaUrl) return null as any;
+        if (!mediaUrl) return [];
 
-        return (
+        return [
           <figure key={nodeKey} className="my-8">
             <Image
               src={mediaUrl}
@@ -154,32 +168,32 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
                 {media.caption} {media.credit && <span>(Credit: {media.credit})</span>}
               </figcaption>
             )}
-          </figure>
-        );
+          </figure>,
+        ];
       }
       case 'list': {
         const ListTag = node.tag === 'ol' ? 'ol' : 'ul';
-        return (
+        return [
           <ListTag
             key={nodeKey}
             className={`${node.tag === 'ol' ? 'list-decimal' : 'list-disc'} pl-6 mb-5 space-y-2 text-[var(--ink)]`}
           >
             {children}
-          </ListTag>
-        );
+          </ListTag>,
+        ];
       }
       case 'listitem':
-        return (
+        return [
           <li key={nodeKey} className="leading-relaxed">
             {children}
-          </li>
-        );
+          </li>,
+        ];
       case 'horizontalrule':
-        return <hr key={nodeKey} className="my-8 border-t border-[var(--border)]" />;
+        return [<hr key={nodeKey} className="my-8 border-t border-[var(--border)]" />];
       case 'linebreak':
-        return <br key={nodeKey} />;
+        return [<br key={nodeKey} />];
       case 'tab':
-        return <span key={nodeKey}>&emsp;</span>;
+        return [<span key={nodeKey}>&emsp;</span>];
       case 'paragraph': {
         const paragraphText = node.children?.map((child) => child.text || '').join('').trim() || '';
         const paragraphClass = paragraphText.startsWith('Q:')
@@ -187,14 +201,41 @@ export function serializeLexical(nodes: Node[], keyPrefix = 'node'): JSX.Element
           : paragraphText.startsWith('A:')
             ? 'article-paragraph qa-answer'
             : 'article-paragraph';
-        return (
+
+        const pElement = (
           <p key={nodeKey} className={paragraphClass}>
             {children}
           </p>
         );
+
+        if (options.enableAds && options.isTopLevel) {
+          paragraphCount += 1;
+          if (paragraphCount === 1) {
+            return [
+              pElement,
+              <AdskeeperWidget
+                key={`${nodeKey}-ad-at1`}
+                widgetId="2092312"
+                placement="article"
+              />,
+            ];
+          }
+          if (paragraphCount === 3) {
+            return [
+              pElement,
+              <AdskeeperWidget
+                key={`${nodeKey}-ad-at2`}
+                widgetId="2092316"
+                placement="article"
+              />,
+            ];
+          }
+        }
+
+        return [pElement];
       }
       default:
-        return <Fragment key={nodeKey}>{children}</Fragment>;
+        return [<Fragment key={nodeKey}>{children}</Fragment>];
     }
-  }) as any;
+  });
 }
