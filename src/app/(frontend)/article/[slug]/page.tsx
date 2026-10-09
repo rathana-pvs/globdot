@@ -5,7 +5,6 @@ import { StoryVisual } from '@/components/story-visual';
 import { StoryCard } from '@/components/story-card';
 import { ArticleLeadImage } from '@/components/article-lead-image';
 import { RichText } from '@/components/RichText';
-import { AdSlot } from '@/components/ad-slot';
 import { AdskeeperWidget } from '@/components/adskeeper-widget';
 import { ReadingProgressBar } from '@/components/reading-progress-bar';
 import { ArticleShareBar } from '@/components/article-share-bar';
@@ -380,9 +379,6 @@ export default async function ArticlePage({ params }: Props) {
             </div>
           )}
 
-          <div className="rail-ad-container">
-            <AdSlot placement="sidebar" />
-          </div>
         </aside>
       </div>
 

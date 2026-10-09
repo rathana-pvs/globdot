@@ -5,6 +5,7 @@ import '../globals.css';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { AnalyticsBeacon } from '@/components/analytics-beacon';
+import { AdskeeperRouteLoader } from '@/components/adskeeper-widget';
 
 const geistSans = Geist({
   variable: '--font-ui',
@@ -54,6 +55,9 @@ export default function FrontendLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script src="https://jsc.adskeeper.com/site/1112395.js" async />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {Boolean(gaId) && (
           <>
@@ -79,11 +83,7 @@ export default function FrontendLayout({
         {children}
         <SiteFooter />
         <AnalyticsBeacon />
-        <Script
-          id="adskeeper-loader"
-          strategy="afterInteractive"
-          src="https://jsc.adskeeper.com/site/1112395.js"
-        />
+        <AdskeeperRouteLoader />
       </body>
     </html>
   );
