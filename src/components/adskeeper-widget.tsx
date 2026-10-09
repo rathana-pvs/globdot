@@ -16,27 +16,15 @@ export function AdskeeperWidget({
 }: AdskeeperWidgetProps) {
   const idStr = String(widgetId);
 
-  const isDev = process.env.NODE_ENV === 'development';
-
   return (
-    <aside
-      className={`ad-slot ad-${placement} ${className}`}
-      aria-label="Advertisement"
-    >
-      <span className="ad-label">Advertisement</span>
+    <div className={`adskeeper-slot ads-${placement} ${className}`}>
       <div id={`M1112395ScriptRootC${idStr}`} data-type="_mgwidget" data-widget-id={idStr} />
       <script
         dangerouslySetInnerHTML={{
           __html: '(function(w,q){w[q]=w[q]||[];w[q].push(["_mgc.load"])})(window,"_mgq");',
         }}
       />
-      {isDev && (
-        <div className="ad-slot-dev-note" aria-hidden="true">
-          <span>AdsKeeper Widget #{idStr}</span>
-          <small>Domain: globdot.com (Ads render live on production)</small>
-        </div>
-      )}
-    </aside>
+    </div>
   );
 }
 
