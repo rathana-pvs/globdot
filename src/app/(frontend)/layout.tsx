@@ -82,6 +82,20 @@ export default function FrontendLayout({
         <SiteHeader />
         {children}
         <SiteFooter />
+        <Script
+          id="_wau1d5"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              var _wau = _wau || [];
+              _wau.push(["dynamic", "h20o2miaf4", "1d5", "c4302bffffff", "small"]);
+              var wauLoader = document.createElement("script");
+              wauLoader.async = true;
+              wauLoader.src = "https://waust.at/d.js";
+              document.body.appendChild(wauLoader);
+            `,
+          }}
+        />
         <AnalyticsBeacon />
         <AdskeeperRouteLoader />
       </body>

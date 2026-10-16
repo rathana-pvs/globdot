@@ -1,5 +1,10 @@
 import { withPayload } from '@payloadcms/next/withPayload';
 
+// The widget uses protocol-relative requests, including HTTP on local dev pages.
+const whosAmungUsSources = process.env.NODE_ENV === 'development'
+  ? 'https://waust.at https://whos.amung.us http://whos.amung.us'
+  : 'https://waust.at https://whos.amung.us';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -60,11 +65,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://jsc.adskeeper.com https://*.adskeeper.com https://cdn.id5-sync.com https://script.anura.io",
+              `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://jsc.adskeeper.com https://*.adskeeper.com https://cdn.id5-sync.com https://script.anura.io ${whosAmungUsSources}`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https: https://images.unsplash.com https://res.cloudinary.com https://globdot.com https://www.globdot.com",
               "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://*.google-analytics.com https://servicer.adskeeper.com https://widgets.adskeeper.com https://*.adskeeper.com https://*.adskeeper.co.uk https://script.anura.io https://adrta.com https://*.id5-sync.com",
+              `connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://*.google-analytics.com https://servicer.adskeeper.com https://widgets.adskeeper.com https://*.adskeeper.com https://*.adskeeper.co.uk https://script.anura.io https://adrta.com https://*.id5-sync.com ${whosAmungUsSources}`,
               "frame-src 'self' https://*.adskeeper.com https://*.adskeeper.co.uk",
               "frame-ancestors 'self'",
               "form-action 'self'",
