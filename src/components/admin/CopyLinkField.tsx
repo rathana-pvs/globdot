@@ -1,21 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useFormFields, useDocumentInfo } from '@payloadcms/ui';
+import { useFormFields } from '@payloadcms/ui';
 import { getPublicSiteUrl } from '@/lib/utils';
 
 export const CopyLinkField: React.FC = () => {
   const [mounted, setMounted] = useState(false);
-  const docInfo = useDocumentInfo();
-  const docId = docInfo?.id;
   const slug = useFormFields(([fields]) => (fields?.slug?.value as string) || '');
   const status = useFormFields(([fields]) => (fields?.status?.value as string) || 'draft');
   const publicSiteUrl = getPublicSiteUrl();
 
   const [copied, setCopied] = useState(false);
-  const [shortlinkCopied, setShortlinkCopied] = useState(false);
-  const [shortlinkLoading, setShortlinkLoading] = useState(false);
-  const [shortlink, setShortlink] = useState<string | null>(null);
+  const [trackedLinkCopied, setTrackedLinkCopied] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -71,32 +67,17 @@ export const CopyLinkField: React.FC = () => {
     window.open(`${publicSiteUrl}/article/${slug}`, '_blank', 'noopener,noreferrer');
   };
 
-  const handleCreateShortlink = async () => {
-    if (!docId) {
-      alert('Please save the article first before generating a shortlink.');
-      return;
-    }
-    setShortlinkLoading(true);
+  const handleCopyTrackedLink = async () => {
     try {
-      const res = await fetch('/api/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId: docId, label: 'Admin Sidebar Share' }),
-      });
-      const data = await res.json();
-      if (data.success && data.link) {
-        const fullShortUrl = `${publicSiteUrl}${data.link.url}`;
-        setShortlink(fullShortUrl);
-        await navigator.clipboard.writeText(fullShortUrl);
-        setShortlinkCopied(true);
-        setTimeout(() => setShortlinkCopied(false), 2500);
-      } else {
-        alert(data.error || 'Failed to create shortlink');
-      }
+      const trackedUrl = new URL(`/article/${slug}`, publicSiteUrl);
+      trackedUrl.searchParams.set('utm_source', 'direct');
+      trackedUrl.searchParams.set('utm_medium', 'share');
+      trackedUrl.searchParams.set('utm_campaign', 'admin_sidebar');
+      await navigator.clipboard.writeText(trackedUrl.toString());
+      setTrackedLinkCopied(true);
+      setTimeout(() => setTrackedLinkCopied(false), 2500);
     } catch (e: any) {
-      alert(e?.message || 'Failed to create shortlink');
-    } finally {
-      setShortlinkLoading(false);
+      alert(e?.message || 'Failed to copy tracked link');
     }
   };
 
@@ -216,32 +197,25 @@ export const CopyLinkField: React.FC = () => {
         </button>
       </div>
 
-      {docId ? (
-        <button
-          type="button"
-          onClick={handleCreateShortlink}
-          disabled={shortlinkLoading}
-          style={{
-            marginTop: '2px',
-            padding: '6px 8px',
-            borderRadius: '6px',
-            border: '1px dashed rgba(56, 139, 253, 0.35)',
-            background: 'rgba(56, 139, 253, 0.08)',
-            color: '#58a6ff',
-            fontSize: '11px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            textAlign: 'center',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          {shortlinkLoading
-            ? 'Creating shortlink...'
-            : shortlinkCopied
-            ? `✓ Copied Shortlink: ${shortlink}`
-            : '⚡ Copy Tracked Shortlink (/s/...)'}
-        </button>
-      ) : null}
+      <button
+        type="button"
+        onClick={handleCopyTrackedLink}
+        style={{
+          marginTop: '2px',
+          padding: '6px 8px',
+          borderRadius: '6px',
+          border: '1px dashed rgba(56, 139, 253, 0.35)',
+          background: 'rgba(56, 139, 253, 0.08)',
+          color: '#58a6ff',
+          fontSize: '11px',
+          fontWeight: 600,
+          cursor: 'pointer',
+          textAlign: 'center',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        {trackedLinkCopied ? '✓ Copied Tracked Full Link' : '⚡ Copy Tracked Full Link'}
+      </button>
     </div>
   );
 };

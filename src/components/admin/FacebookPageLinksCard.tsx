@@ -1,26 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useFormFields, useDocumentInfo } from '@payloadcms/ui';
+import { useFormFields } from '@payloadcms/ui';
 import { getPublicSiteUrl } from '@/lib/utils';
 
 interface PageSlot {
-  id: number | string;
   key: string;
   name: string;
-  shortlink: string;
-  clicks: number;
+  url: string;
 }
 
 export const FacebookPageLinksCard: React.FC = () => {
   const [mounted, setMounted] = useState(false);
-  const docInfo = useDocumentInfo();
-  const docId = docInfo?.id;
   const slug = useFormFields(([fields]) => (fields?.slug?.value as string) || '');
   const publicSiteUrl = getPublicSiteUrl();
 
   const [pages, setPages] = useState<PageSlot[]>([]);
-  const [loading, setLoading] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [copiedSnippetKey, setCopiedSnippetKey] = useState<string | null>(null);
   const [templateType, setTemplateType] = useState<'verified' | 'breaking' | 'discuss' | 'plain'>('verified');
@@ -29,81 +24,20 @@ export const FacebookPageLinksCard: React.FC = () => {
     setMounted(true);
   }, []);
 
-  // 1. Load existing links from database when docId is available
+  // Direct tracked links are deterministic and need no database record.
   useEffect(() => {
-    if (!docId) return;
+    if (!slug) return;
+    setPages([createPageSlot(1, slug, publicSiteUrl)]);
+  }, [slug, publicSiteUrl]);
 
-    fetch(`/api/share?articleId=${docId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.links) && data.links.length > 0) {
-          const loaded: PageSlot[] = data.links
-            .filter((l: any) => l.pageKey || l.channel === 'facebook')
-            .map((l: any, idx: number) => ({
-              id: l.id,
-              key: l.pageKey || `fb_page_${idx + 1}`,
-              name: l.label?.replace(/^FB:\s*/, '') || `Page ${idx + 1}`,
-              shortlink: `${publicSiteUrl}${l.url}`,
-              clicks: l.clicks || 0,
-            }));
-
-          setPages(loaded);
-        }
-      })
-      .catch(() => {});
-  }, [docId, publicSiteUrl]);
-
-  // 2. 1-CLICK: Add next page and immediately generate shortlink
-  const handleAddAndGenerate = async () => {
-    if (!docId) {
-      alert('Please save the article first before generating comment links.');
-      return;
-    }
-
-    const nextNumber = pages.length + 1;
-    const name = `Page ${nextNumber}`;
-    const pageKey = `fb_page_${nextNumber}`;
-
-    setLoading(true);
-    try {
-      const res = await fetch('/api/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          articleId: docId,
-          pageKey,
-          label: `FB: ${name}`,
-          channel: 'facebook',
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success && data.link) {
-        const newPage: PageSlot = {
-          id: data.link.id,
-          key: pageKey,
-          name,
-          shortlink: `${publicSiteUrl}${data.link.url}`,
-          clicks: 0,
-        };
-        setPages((prev) => [...prev, newPage]);
-      } else {
-        alert(data.error || 'Failed to generate link.');
-      }
-    } catch (e: any) {
-      alert(e?.message || 'Error generating link.');
-    } finally {
-      setLoading(false);
-    }
+  // Add another campaign variant without creating or querying a DB record.
+  const handleAddAndGenerate = () => {
+    const nextNumber = getNextPageNumber(pages);
+    setPages((prev) => [...prev, createPageSlot(nextNumber, slug, publicSiteUrl)]);
   };
 
-  // 3. Remove a page link
-  const handleRemovePage = async (id: number | string, name: string) => {
-    if (!confirm(`Delete comment link for "${name}"?`)) return;
-    try {
-      await fetch(`/api/share?id=${id}`, { method: 'DELETE' });
-      setPages((prev) => prev.filter((p) => p.id !== id));
-    } catch {}
+  const handleRemovePage = (key: string) => {
+    setPages((prev) => prev.filter((page) => page.key !== key));
   };
 
   const getCommentSnippet = (url: string) => {
@@ -186,7 +120,7 @@ export const FacebookPageLinksCard: React.FC = () => {
       </div>
 
       <p style={{ margin: 0, fontSize: '11px', color: 'var(--theme-text-muted, #8b949e)', lineHeight: 1.4 }}>
-        Each Facebook page gets a unique shortlink to prevent Facebook duplicate link suppression and track clicks per page.
+        Each Facebook page gets a direct article link with UTM tracking. No redirect or shortlink database lookup is required.
       </p>
 
       {/* When NO links exist yet: 1-Click Generate Page 1 */}
@@ -194,7 +128,6 @@ export const FacebookPageLinksCard: React.FC = () => {
         <button
           type="button"
           onClick={handleAddAndGenerate}
-          disabled={loading}
           style={{
             width: '100%',
             padding: '10px 14px',
@@ -212,7 +145,7 @@ export const FacebookPageLinksCard: React.FC = () => {
             transition: 'all 0.15s ease',
           }}
         >
-          {loading ? 'Creating Link...' : '⚡ 1-Click Generate Page 1 Link'}
+          ⚡ Generate Page 1 Link
         </button>
       ) : (
         <>
@@ -269,29 +202,16 @@ export const FacebookPageLinksCard: React.FC = () => {
                     gap: '6px',
                   }}
                 >
-                  {/* Row 1: Name & Clicks */}
+                  {/* Row 1: Page name */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: '#e6edf3' }}>
                       {page.name}
                     </span>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          padding: '1px 5px',
-                          borderRadius: '4px',
-                          background: page.clicks > 0 ? 'rgba(46, 160, 67, 0.2)' : 'rgba(255,255,255,0.06)',
-                          color: page.clicks > 0 ? '#3fb950' : 'var(--theme-text-muted, #8b949e)',
-                          fontWeight: 600,
-                        }}
-                      >
-                        👁️ {page.clicks} clicks
-                      </span>
-
+                    {pages.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => handleRemovePage(page.id, page.name)}
+                        onClick={() => handleRemovePage(page.key)}
                         style={{
                           background: 'none',
                           border: 'none',
@@ -301,14 +221,14 @@ export const FacebookPageLinksCard: React.FC = () => {
                           padding: '0 2px',
                           lineHeight: 1,
                         }}
-                        title="Delete this page link"
+                        title="Remove this page link"
                       >
                         ✕
                       </button>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Row 2: Shortlink URL */}
+                  {/* Row 2: Direct tracked URL */}
                   <div
                     style={{
                       fontSize: '10px',
@@ -318,16 +238,16 @@ export const FacebookPageLinksCard: React.FC = () => {
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
                     }}
-                    title={page.shortlink}
+                    title={page.url}
                   >
-                    {page.shortlink}
+                    {page.url}
                   </div>
 
                   {/* Row 3: Actions */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '6px' }}>
                     <button
                       type="button"
-                      onClick={() => handleCopyLink(page.key, page.shortlink)}
+                      onClick={() => handleCopyLink(page.key, page.url)}
                       style={{
                         padding: '5px 8px',
                         borderRadius: '4px',
@@ -348,7 +268,7 @@ export const FacebookPageLinksCard: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => handleCopySnippet(page.key, page.shortlink)}
+                      onClick={() => handleCopySnippet(page.key, page.url)}
                       style={{
                         padding: '5px 8px',
                         borderRadius: '4px',
@@ -376,7 +296,6 @@ export const FacebookPageLinksCard: React.FC = () => {
           <button
             type="button"
             onClick={handleAddAndGenerate}
-            disabled={loading}
             style={{
               width: '100%',
               marginTop: '4px',
@@ -395,10 +314,29 @@ export const FacebookPageLinksCard: React.FC = () => {
               transition: 'all 0.15s ease',
             }}
           >
-            {loading ? 'Creating...' : `⚡ + Add Page ${pages.length + 1}`}
+            {`⚡ + Add Page ${getNextPageNumber(pages)}`}
           </button>
         </>
       )}
     </div>
   );
 };
+
+function createPageSlot(pageNumber: number, slug: string, publicSiteUrl: string): PageSlot {
+  const key = `fb_page_${pageNumber}`;
+  const url = new URL(`/article/${slug}`, publicSiteUrl);
+  url.searchParams.set('utm_source', 'facebook');
+  url.searchParams.set('utm_medium', 'comment');
+  url.searchParams.set('utm_campaign', key);
+
+  return {
+    key,
+    name: `Page ${pageNumber}`,
+    url: url.toString(),
+  };
+}
+
+function getNextPageNumber(pages: PageSlot[]): number {
+  const existingNumbers = pages.map((page) => Number(page.key.replace('fb_page_', '')) || 0);
+  return Math.max(0, ...existingNumbers) + 1;
+}
