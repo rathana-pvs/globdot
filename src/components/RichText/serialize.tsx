@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { getMediaUrl } from '@/lib/utils';
 import { QuoteHighlight } from './quote-highlight';
 import { AdskeeperWidget } from '@/components/adskeeper-widget';
+import { hasParagraphText, normalizeArticleParagraphs } from '@/lib/normalize-article-paragraphs';
 
 type Node = {
   type: string;
@@ -52,8 +53,13 @@ export function serializeLexical(
   options: SerializeOptions = { enableAds: false, isTopLevel: false }
 ): JSX.Element[] {
   let paragraphCount = 0;
+  // Existing imported content can contain the whole story in one paragraph.
+  const renderNodes = options.isTopLevel ? normalizeArticleParagraphs(nodes) : nodes;
+  const lastTextParagraph = renderNodes.findLastIndex(
+    (node) => node?.type === 'paragraph' && hasParagraphText(node)
+  );
 
-  return nodes.flatMap((node, i) => {
+  return renderNodes.flatMap((node, i) => {
     const nodeKey = `${keyPrefix}-${i}`;
 
     if (!node) return [];
@@ -208,8 +214,10 @@ export function serializeLexical(
           </p>
         );
 
-        if (options.enableAds && options.isTopLevel) {
+        if (options.enableAds && options.isTopLevel && hasParagraphText(node)) {
           paragraphCount += 1;
+          // Keep an in-article unit between text, away from the bottom feed.
+          if (i >= lastTextParagraph) return [pElement];
           if (paragraphCount === 1) {
             return [
               pElement,

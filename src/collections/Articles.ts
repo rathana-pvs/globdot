@@ -2,6 +2,7 @@ import { type CollectionConfig } from 'payload';
 import { lexicalEditor, FixedToolbarFeature, HeadingFeature, HorizontalRuleFeature, UploadFeature } from '@payloadcms/richtext-lexical';
 import { slugify, cleanArticleSlug, calcReadTime } from '../lib/utils';
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { normalizeArticleParagraphs } from '../lib/normalize-article-paragraphs';
 
 const revalidateArticlePages = (doc?: any, previousDoc?: any) => {
   revalidateTag('articles');
@@ -70,6 +71,15 @@ export const Articles: CollectionConfig = {
         }
 
         if (data.content) {
+          if (Array.isArray(data.content.root?.children)) {
+            data.content = {
+              ...data.content,
+              root: {
+                ...data.content.root,
+                children: normalizeArticleParagraphs(data.content.root.children),
+              },
+            };
+          }
           try {
             const contentStr = JSON.stringify(data.content);
             data.readTime = calcReadTime(contentStr);
