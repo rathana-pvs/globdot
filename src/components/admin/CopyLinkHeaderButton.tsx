@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useFormFields } from '@payloadcms/ui';
+import { getPublicSiteUrl } from '@/lib/utils';
 
 export const CopyLinkHeaderButton: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   const [copied, setCopied] = useState(false);
   const slug = useFormFields(([fields]) => (fields?.slug?.value as string) || '');
+  const publicSiteUrl = getPublicSiteUrl();
 
   useEffect(() => {
     setMounted(true);
@@ -16,7 +18,7 @@ export const CopyLinkHeaderButton: React.FC = () => {
 
   const handleCopy = async () => {
     try {
-      const fullUrl = `${window.location.origin}/article/${slug}`;
+      const fullUrl = `${publicSiteUrl}/article/${slug}`;
       await navigator.clipboard.writeText(fullUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

@@ -312,7 +312,16 @@ export const Articles: CollectionConfig = {
       admin: { position: 'sidebar' },
     },
     { name: 'isBreaking', type: 'checkbox', defaultValue: false, admin: { position: 'sidebar' } },
-    { name: 'isFeatured', type: 'checkbox', defaultValue: false, admin: { position: 'sidebar' } },
+    {
+      name: 'isFeatured',
+      label: 'Feature on homepage',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        position: 'sidebar',
+        description: 'Featured stories are prioritized in the homepage lead and briefing.',
+      },
+    },
     {
       name: 'publishedAt',
       type: 'date',

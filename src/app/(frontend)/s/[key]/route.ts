@@ -1,13 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getPayloadClient } from '@/lib/payload';
+import { getPublicSiteUrl } from '@/lib/utils';
 
 export async function GET(
-  request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ key: string }> }
 ) {
   const { key } = await params;
+  const publicSiteUrl = getPublicSiteUrl();
   if (!key || key.length > 20) {
-    return NextResponse.redirect(new URL('/', request.url), 302);
+    return NextResponse.redirect(new URL('/', publicSiteUrl), 302);
   }
 
   try {
@@ -21,7 +23,7 @@ export async function GET(
 
     const link = result.docs[0];
     if (!link || !link.article) {
-      return NextResponse.redirect(new URL('/', request.url), 302);
+      return NextResponse.redirect(new URL('/', publicSiteUrl), 302);
     }
 
     // Increment click counter
@@ -35,7 +37,7 @@ export async function GET(
 
     const articleSlug = typeof link.article === 'object' ? link.article.slug : null;
     if (articleSlug) {
-      const targetUrl = new URL(`/article/${articleSlug}`, request.url);
+      const targetUrl = new URL(`/article/${articleSlug}`, publicSiteUrl);
       const source = (link as any).channel || 'facebook';
       const medium = (link as any).utmMedium || 'comment';
       const campaign = (link as any).pageKey || (link as any).label || 'share';
@@ -50,5 +52,5 @@ export async function GET(
     console.error('Error handling share link:', e);
   }
 
-  return NextResponse.redirect(new URL('/', request.url), 302);
+  return NextResponse.redirect(new URL('/', publicSiteUrl), 302);
 }

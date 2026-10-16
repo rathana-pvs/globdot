@@ -201,6 +201,9 @@ export interface Article {
   status?: ('draft' | 'in_review' | 'approved' | 'published' | 'archived') | null;
   homepageSlot?: ('standard' | 'lead' | 'secondary' | 'editors_pick') | null;
   isBreaking?: boolean | null;
+  /**
+   * Featured stories are prioritized in the homepage lead and briefing.
+   */
   isFeatured?: boolean | null;
   publishedAt?: string | null;
   /**

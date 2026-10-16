@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useFormFields, useDocumentInfo } from '@payloadcms/ui';
+import { getPublicSiteUrl } from '@/lib/utils';
 
 interface PageSlot {
   id: number | string;
@@ -16,6 +17,7 @@ export const FacebookPageLinksCard: React.FC = () => {
   const docInfo = useDocumentInfo();
   const docId = docInfo?.id;
   const slug = useFormFields(([fields]) => (fields?.slug?.value as string) || '');
+  const publicSiteUrl = getPublicSiteUrl();
 
   const [pages, setPages] = useState<PageSlot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,7 +32,6 @@ export const FacebookPageLinksCard: React.FC = () => {
   // 1. Load existing links from database when docId is available
   useEffect(() => {
     if (!docId) return;
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
     fetch(`/api/share?articleId=${docId}`)
       .then((res) => res.json())
@@ -42,7 +43,7 @@ export const FacebookPageLinksCard: React.FC = () => {
               id: l.id,
               key: l.pageKey || `fb_page_${idx + 1}`,
               name: l.label?.replace(/^FB:\s*/, '') || `Page ${idx + 1}`,
-              shortlink: `${origin}${l.url}`,
+              shortlink: `${publicSiteUrl}${l.url}`,
               clicks: l.clicks || 0,
             }));
 
@@ -50,7 +51,7 @@ export const FacebookPageLinksCard: React.FC = () => {
         }
       })
       .catch(() => {});
-  }, [docId]);
+  }, [docId, publicSiteUrl]);
 
   // 2. 1-CLICK: Add next page and immediately generate shortlink
   const handleAddAndGenerate = async () => {
@@ -82,7 +83,7 @@ export const FacebookPageLinksCard: React.FC = () => {
           id: data.link.id,
           key: pageKey,
           name,
-          shortlink: `${origin}${data.link.url}`,
+          shortlink: `${publicSiteUrl}${data.link.url}`,
           clicks: 0,
         };
         setPages((prev) => [...prev, newPage]);

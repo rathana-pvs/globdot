@@ -18,14 +18,23 @@ export default async function Home() {
   const breaking = stories.find((s: any) => s.isBreaking);
 
   /* ── Slot allocation ──────────────────────────────────── */
-  const lead = stories.find((s: any) => s.homepageSlot === 'lead') || stories[0];
+  // A featured story is the strongest homepage signal. Because stories are
+  // returned newest-first, the most recently featured article becomes the
+  // lead; the more specific slot controls remain useful as fallbacks.
+  const featured = stories.filter((s: any) => s.isFeatured);
+  const lead = featured[0] || stories.find((s: any) => s.homepageSlot === 'lead') || stories[0];
   const usedIds = new Set<string | number>([lead?.id].filter(Boolean));
   const pool = () => stories.filter((s: any) => !usedIds.has(s.id));
 
   // Briefing: 3 curated stories to balance the lead column height
   const secondaryTagged = stories.filter((s: any) => s.homepageSlot === 'secondary' && s.id !== lead?.id);
-  const secondaryPool = pool().filter((s: any) => !secondaryTagged.some((t: any) => t.id === s.id));
-  const secondary = [...secondaryTagged, ...secondaryPool].slice(0, 3);
+  const secondaryFeatured = featured.filter((s: any) => s.id !== lead?.id);
+  const curatedSecondary = [...secondaryFeatured, ...secondaryTagged].filter(
+    (story: any, index: number, items: any[]) =>
+      items.findIndex((candidate: any) => candidate.id === story.id) === index,
+  );
+  const secondaryPool = pool().filter((s: any) => !curatedSecondary.some((t: any) => t.id === s.id));
+  const secondary = [...curatedSecondary, ...secondaryPool].slice(0, 3);
   secondary.forEach((s: any) => usedIds.add(s.id));
 
   // Latest updates wire

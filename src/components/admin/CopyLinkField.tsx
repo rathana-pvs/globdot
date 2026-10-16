@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useFormFields, useDocumentInfo } from '@payloadcms/ui';
+import { getPublicSiteUrl } from '@/lib/utils';
 
 export const CopyLinkField: React.FC = () => {
   const [mounted, setMounted] = useState(false);
@@ -9,6 +10,7 @@ export const CopyLinkField: React.FC = () => {
   const docId = docInfo?.id;
   const slug = useFormFields(([fields]) => (fields?.slug?.value as string) || '');
   const status = useFormFields(([fields]) => (fields?.status?.value as string) || 'draft');
+  const publicSiteUrl = getPublicSiteUrl();
 
   const [copied, setCopied] = useState(false);
   const [shortlinkCopied, setShortlinkCopied] = useState(false);
@@ -55,7 +57,7 @@ export const CopyLinkField: React.FC = () => {
 
   const handleCopy = async () => {
     try {
-      const fullUrl = `${window.location.origin}/article/${slug}`;
+      const fullUrl = `${publicSiteUrl}/article/${slug}`;
       await navigator.clipboard.writeText(fullUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2200);
@@ -66,7 +68,7 @@ export const CopyLinkField: React.FC = () => {
   };
 
   const handleOpen = () => {
-    window.open(`/article/${slug}`, '_blank', 'noopener,noreferrer');
+    window.open(`${publicSiteUrl}/article/${slug}`, '_blank', 'noopener,noreferrer');
   };
 
   const handleCreateShortlink = async () => {
@@ -83,7 +85,7 @@ export const CopyLinkField: React.FC = () => {
       });
       const data = await res.json();
       if (data.success && data.link) {
-        const fullShortUrl = `${window.location.origin}${data.link.url}`;
+        const fullShortUrl = `${publicSiteUrl}${data.link.url}`;
         setShortlink(fullShortUrl);
         await navigator.clipboard.writeText(fullShortUrl);
         setShortlinkCopied(true);

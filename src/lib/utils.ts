@@ -7,6 +7,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function getPublicSiteUrl(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://globdot.com').replace(/\/+$/, '');
+}
+
 export function formatDate(dateString: string | null | undefined, pattern = 'd MMM yyyy'): string {
   if (!dateString) return 'Recently';
   try {
