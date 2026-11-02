@@ -8,6 +8,23 @@ interface ArticleViewCountProps {
   className?: string;
 }
 
+const showViewBaseline = process.env.NEXT_PUBLIC_VIEW_COUNT_BASELINE !== 'false';
+const VIEW_BASELINE_MIN = 700;
+const VIEW_BASELINE_RANGE = 801; // Inclusive range: 700-1500
+
+export function getViewBaseline(slug: string): number {
+  if (!showViewBaseline || !slug) return 0;
+
+  // Stable per article: the baseline never changes between page loads.
+  let hash = 2166136261;
+  for (let index = 0; index < slug.length; index += 1) {
+    hash ^= slug.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return VIEW_BASELINE_MIN + ((hash >>> 0) % VIEW_BASELINE_RANGE);
+}
+
 export function formatViews(count: number): string {
   const safeCount = Math.max(0, Math.floor(count || 0));
   const label = safeCount === 1 ? 'view' : 'views';
@@ -32,7 +49,8 @@ export function ArticleViewCount({
   initialViews = 0,
   className = '',
 }: ArticleViewCountProps) {
-  const [views, setViews] = useState<number>(initialViews);
+  const [actualViews, setActualViews] = useState<number>(initialViews);
+  const views = getViewBaseline(slug) + actualViews;
 
   useEffect(() => {
     if (!slug) return;
@@ -62,7 +80,7 @@ export function ArticleViewCount({
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && typeof data.viewCount === 'number') {
-          setViews(data.viewCount);
+          setActualViews(data.viewCount);
         }
       })
       .catch(() => {});
